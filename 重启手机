@@ -1,0 +1,16 @@
+function main() {
+    openPowerDialog({afterWait:3000});
+
+    var ret = findView('txt:重新启动', {maxStep: 8});
+    if (ret.length > 0) {
+        click(ret.views[0], {afterWait: 2000});
+
+        ret = findView('txt:点击重新启动', {maxStep: 8});
+        if (ret.length > 0) {
+            click(ret.views[0], {afterWait: 10000});
+            return true;
+        }
+    }
+
+    return false;
+}

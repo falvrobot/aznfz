@@ -1,0 +1,144 @@
+
+import 'sys_'+getManufacturer()+'_runtime';
+
+var sShouldExit = false;
+
+function main() {
+    var hours = new Date().getHours();
+    console.log('hours:' + hours);
+    if (hours < 8 || hours > 23) {
+        return;
+    }
+
+    if (!smartLaunchApp('com.cnblogs.xamarinandroid', false, false, 0)) {
+        console.error('启动app失败');
+        return;
+    }
+
+    var ret = waitAppLaunched('txt:博客|txt:我的', {failed: exitPopup, maxStep: 30, beforeWait: 3000});
+    if (ret.length > 0) {
+        console.log('进入程序');
+
+        var maxReadCount = parseInt(Math.random()*3+1);
+        var index = 0;
+        console.log('max read count:' + maxReadCount);
+        while (index < maxReadCount) {
+            var scrollCount = parseInt(Math.random()*5+1);
+            console.log('scrollCount:' + scrollCount);
+            for (var i = 0; i < scrollCount; ++i) {
+                scroll('up', {distance: 0.9, afterWait:3000});
+            }
+
+            ret = findView('cn:android.support.v7.widget.RecyclerView', {failed:exitPopup});
+            if (ret.length > 0) {
+                var container = ret.views[0];
+
+                var i = parseInt(Math.random()*(container.length));
+                var item = container[i];
+                if (item && item.clickable) {
+                    click(item, {clickable: true, afterWait: 3000});
+
+                    ret = findView('txt:首页');
+                    if (ret.length <= 0) {
+                        if (rsCurWindowClassName.endsWith('BlogDetailActivity')) {
+                            console.log('进入了文章');
+
+                            // 关注
+                            if (prob(50)) {
+                                var back = false;
+                                ret = switchPage('txt:作者主页', 'txt:加关注', {failed: exitPopup, click: true});
+                                if (ret.length > 0) {
+                                    click(ret.views[0], {click: true, afterWait: 1000});
+                                    back = true;
+                                }
+                                back2Page('txt:作者主页', {failed: exitPopup, backFirst: back});
+                            }
+
+                            var startTime = new Date().getTime();
+                            var maxTime = parseInt(Math.random() * 40000 + 40000);
+                            while (new Date().getTime() - startTime < maxTime) {
+                                ret = findView('txt:结束', {failed: exitPopup});
+                                if (ret.length > 0) {
+                                    break;
+                                }
+                                scroll('up', {distance: Math.random()*0.45 + 0.3, duration: parseInt(Math.random()*250+450), afterWait: parseInt(Math.random()*1500+1000)});
+                            }
+
+                            scroll('down', {distance: Math.random()*0.45 + 0.3, duration: parseInt(Math.random()*400+200), afterWait: 3000});
+
+                            // 点赞
+                            if (prob(50)) {
+                                ret = findView('id:com.cnblogs.xamarinandroid:id/btn_agree', {failed: exitPopup});
+                                if (ret.length > 0) {
+                                    click(ret.views[0], {click: true, afterWait: 1000});
+                                }
+                            }
+
+                            // 收藏
+                            if (prob(30)) {
+                                ret = findView('id:com.cnblogs.xamarinandroid:id/action_collect', {failed: exitPopup});
+                                if (ret.length > 0) {
+                                    click(ret.views[0], {click: true, afterWait: 1000});
+                                }
+                            }
+
+                            // 评论
+                            if (prob(50)) {
+                                ret = switchPage('txt^:我也来说两句', 'id:com.cnblogs.xamarinandroid:id/et_comment', {failed: exitPopup});
+                                if (ret.length > 0) {
+                                    console.log('粘贴');
+
+                                    var customData = getCustomData('comments');
+                                    if (customData) {
+                                        console.log('customData:' + customData);
+                                        var comments = customData.split('#');
+                                        console.log('comments:' + comments);
+                                        var index = parseInt(Math.random() * comments.length);
+                                        var text = comments[index];
+                                        console.log('paste text:' + text);
+                                        paste(ret.views[0], text, {type: 'paste', afterWait: 3000});
+
+                                        clickByTag('txt:提交', {afterWait: 3000, click: true});
+                                    }
+                                }
+                            }
+
+                            back2Page('txt:首页', {failed: exitPopup});
+                        }
+                    } else {
+                        back2Page('txt:首页', {failed: exitPopup, backFirst: false});
+                    }
+                }
+            }
+
+            ++index;
+        }
+
+        console.log('finish');
+    }
+
+    exitAppDeal();
+    console.log('end');
+}
+
+function exitPopup() {
+    if (sShouldExit) {
+        return;
+    }
+
+    var ret = findView('txt:以后再说|txt:我知道了|txt:知道了|txt*:欢迎您使用搜索|txt:要吐槽', {maxStep:1});
+    if (ret.length > 0) {
+        console.log('text:' + ret.tag);
+        if (ret.tag == '欢迎您使用搜索') {
+            clickByTag('txt:退出', {click: true});
+        } else if (ret.tag == '要吐槽') {
+            var view = ret.views[0].parent;
+            gestureClick(rsScreenWidth / 2, view.bottom + 100);
+        } else {
+            click(ret.views[0]);
+        }
+        return true;
+    }
+
+    return globalExitPopup();
+}

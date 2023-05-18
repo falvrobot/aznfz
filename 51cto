@@ -1,0 +1,152 @@
+
+import sys_xiaomi_runtime;
+
+var sShouldExit = false;
+
+function main() {
+    var hours = new Date().getHours();
+    console.log('hours:' + hours);
+    if (hours < 8 || hours > 23) {
+        return;
+    }
+
+    if (!smartLaunchApp('com.cto51.student', false, true, 0)) {
+        console.error('启动app失败');
+        return;
+    }
+
+    var ret = waitAppLaunched('txt:博客|txt:我的', {failed: exitPopup, maxStep: 30, beforeWait: 3000});
+    if (ret.length > 0) {
+        console.log('进入程序');
+
+        var __day checkIn = false;
+        if (!checkIn) {
+            ret = switchPage('txt:我的', 'txt:会员中心|txt:购物车|', {failed: exitPopup, click: true});
+            if (ret.length > 0) {
+                clickByTag('txt:签到', {click: true, afterWait: 2000});
+                checkIn = true;
+            }
+        }
+
+        ret = switchPage('txt:博客', 'txt:51CTO博客', {failed: exitPopup, click: true});
+        if (ret.length > 0) {
+            var maxReadCount = parseInt(Math.random()*3+1);
+            var index = 0;
+            console.log('max read count:' + maxReadCount);
+            while (index < maxReadCount) {
+                var scrollCount = parseInt(Math.random()*5+2);
+                console.log('scrollCount:' + scrollCount);
+                for (var i = 0; i < scrollCount; ++i) {
+                    scroll('up', {distance: 0.9, afterWait:3000});
+                }
+
+                ret = findView('cn:android.webkit.WebView', {failed:exitPopup});
+                if (ret.length > 0) {
+                    var container = ret.views[0];
+
+                    var height = container.height - 200;
+
+                    var enter = false;
+                    var i = 0;
+                    while (!enter && i < 3) {
+                        var y = Math.random() * height + container.top + 100;
+                        gestureClick(rsScreenWidth/2, y, {afterWait: 3000});
+                        ret = findView('txt^:写评论');
+                        // ret = findView('txt^:写评论', {failed: exitPopup});
+                        if (ret.length > 0) {
+                            enter = true;
+                        }
+                        ++i;
+                    }
+                    console.log('进入了文章');
+                    // 关注
+                    if (prob(50)) {
+                        clickByTag('txt:关注', {failed: exitPopup, click: true, afterWait: 2000});
+                    }
+
+                    var startTime = new Date().getTime();
+                    while (new Date().getTime() - startTime < 120000) {
+                        ret = findView('txt:发布评论|txt:上一篇', {failed: exitPopup});
+                        if (ret.length > 0) {
+                            console.log('find:' + ret.tag);
+                            break;
+                        }
+                        console.log('scroll---');
+                        scroll('up', {root: container, distance: Math.random()*0.45 + 0.3, duration: parseInt(Math.random()*250+450), afterWait: parseInt(Math.random()*1500+1000)});
+                    }
+
+                    // scroll('down', {distance: Math.random()*0.45 + 0.3, duration: parseInt(Math.random()*400+200), afterWait: 3000});
+
+                    console.log('out--');
+                    // 点赞
+                    if (prob(50)) {
+                        clickByTag('txt:点赞', {failed: exitPopup, afterWait: 2000});
+                    }
+
+                    // 收藏
+                    if (prob(50)) {
+                        clickByTag('txt:收藏', {failed: exitPopup, afterWait: 2000});
+                    }
+
+                    // 评论
+                    if (prob(50)) {
+                        ret = switchPage('txt^:写评论', 'cn:android.widget.EditText', {failed: exitPopup});
+                        if (ret.length > 0) {
+                            console.log('粘贴');
+
+                            var customData = getCustomData('comments');
+                            if (customData) {
+                                console.log('customData:' + customData);
+                                var comments = customData.split('#');
+                                console.log('comments:' + comments);
+                                var index = parseInt(Math.random() * comments.length);
+                                var text = comments[index];
+                                console.log('paste text:' + text);
+                                paste(ret.views[0], text, {type: 'paste', afterWait: 3000});
+
+                                clickByTag('txt:发布', {afterWait: 3000});
+                            }
+                        }
+                    }
+
+                    back2Page('txt:推荐', {failed: exitPopup});
+                }
+
+                ++index;
+            }
+        }
+
+        console.log('finish');
+    }
+
+    exitAppDeal();
+    console.log('end');
+}
+
+function exitPopup() {
+    if (sShouldExit) {
+        return;
+    }
+
+    var ret = findView('txt:以后再说|txt:我知道了|txt:知道了|txt*:欢迎您使用搜索|txt:要吐槽', {maxStep: 1});
+    if (ret.length > 0) {
+        console.log('text:' + ret.tag);
+        if (ret.tag == '欢迎您使用搜索') {
+            clickByTag('txt:退出', {click: true});
+        } else if (ret.tag == '要吐槽') {
+            var view = ret.views[0].parent;
+            gestureClick(rsScreenWidth / 2, view.bottom + 100);
+        } else {
+            click(ret.views[0]);
+        }
+        return true;
+    }
+
+    ret = findView('id:com.cto51.student:id/iv_close|id:com.cto51.student:id/update_cancel', {maxStep: 1});
+    if (ret.length > 0) {
+        console.log('find:' + ret.tag);
+        click(ret.views[0]);
+    }
+
+    return globalExitPopup();
+}

@@ -1,0 +1,119 @@
+function main() {
+	if (1 == launchApp('com.sankuai.meituan', 'txt:我的', {failed: exitPopup, maxStep: 30})) {
+		var ret = switchPage('txt^:超市', 'txt:超市卖场', {failed: exitPopup, afterWait: 3000,click: true, maxStep: 15});
+            console.log('enter1');
+		if (ret.length > 0) {
+            console.log('mark');
+			clickByTag('txt:超市卖场', {afterWait: 6000,click: true});
+			var scrollIndex = 0;
+			while (scrollIndex < 2) {
+				scroll('up', {type: 1,distance: 0.4,beforeWait: 1000,afterWait: 1000});
+				++scrollIndex;
+			}
+            console.log('start==>');
+            var c = 0;
+			while (c < 1) {
+                ++c;
+                console.log('xxx');
+                var index = 0;
+                while (true) {
+                    var ret = findView('id:com.sankuai.meituan:id/fl_recycle_mach_container', {flag: 'find_all'});
+
+                    if (ret.length <= 0) {
+                        break;
+                    }
+                    var viewContainer = ret.views;
+                    if (index >= viewContainer.length) {
+                        break;
+                    }
+                    var item = viewContainer[index];
+                    click(item);click(item, {click: true, afterWait: 1000});
+                    ret = findView('txt^:搜索店内商品', {maxStep: 8, afterWait: 3000});
+                    if (ret.length > 0) {
+                        console.log('进入商店');                        
+                        // 定位到指定商品列表
+                        var category = getCustomData('category');
+                        console.log('category:' + category);
+                        if (category != '') {
+                            var exit = false;
+                            while (!exit) {
+                                var ret = findView('id:com.sankuai.meituan:id/txt_category_name_1', {flag: 'find_all'});
+                                console.log('ret.views.length:' + ret.views.length);
+                                if (ret.length > 0) {
+                                    var cc = 0;
+                                    for (var item of ret.views) {
+                                        console.log('item:' + item.text);
+                                        if (item.text == category || cc == 1) {
+                                            console.log('find category:' + category);
+                                            click(item, {click: true});
+                                            exit = true;
+                                            break;
+                                        }
+                                        ++cc;
+                                    }
+                                }
+                                
+                                if (!exit) {
+                                    console.log('scroll===');
+                                    scrollByTag('id:com.sankuai.meituan:id/poi_dish_categories', 'up', {type:2, afterWait: 3000});
+                                }
+                            }
+                        }
+
+                        // 开始搜集商品信息
+                        var arr = [];
+                        while (true) {
+                            var ret = findView('id:com.sankuai.meituan:id/detail_content_layout', {flag:'find_all'});
+                            if (ret.length > 0) {
+                                var i = 0;
+                                for (i = 0; i < ret.views.length; ++i) {
+                                    var item = ret.views[i];
+//                                    console.log('index:' + i);
+                                    if (item[0].text != '' && item.length >= 4){
+                                        if (arr.indexOf(item[0].text) < 0) {
+                                            if (item[-1].length >= 3) {
+                                            	arr.push(item[0].text);
+                                                console.log('title:' + item[0].text + '  ' + item[2][0].text + '  价格:' + item[-1][1].text + '  原价:' + item[-1][2].text);
+                                            } else if (item[-1].length >= 2) {
+                                            	arr.push(item[0].text);
+                                                console.log('title:' + item[0].text + '  ' + item[2][0].text + '  价格:' + item[-1][1].text);
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                console.log('can not find item info');
+                            }
+                            
+                            ret = findView('id:com.sankuai.meituan:id/txt_category_name');
+                            if (ret.length > 0) {
+                                console.log('找到另外一个类目啦:' + ret.views[0].text);
+                                break;
+                            }
+                            
+                            scroll('up', {distance: '0.5', afterWait: 2000});
+                        }
+                    } else {
+                        console.log('进入失败');
+                    }
+                    ++index;
+                }
+			}
+            
+            console.log('end');
+            back2Page('txt:美团优选');
+		}
+        console.log('end1');
+	}
+}
+// com.sankuai.waimai.store.manager.marketing.parser.inner.mach.a$a
+function exitPopup() {
+    if (rsCurWindowClassName == 'com.sankuai.waimai.store.manager.marketing.parser.inner.mach.a$a') {
+        back({afterWait: 3000});
+    }
+    
+    var ret = findView('txt:fef|id:ddd', {maxStep:1});
+    if (ret.length > 0) {
+        clickByTag('txt:x');
+    }
+}

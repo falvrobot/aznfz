@@ -1,0 +1,412 @@
+function main() {
+    var ret = launchApp('com.baidu.searchbox.lite', 'txt:我的|id:android:id/tabs', {failed: exitPopup, maxStep: 30, beforeWait: 3000});
+    if (1 == ret) {
+        console.log('进入程序');
+
+        var appStartTime = new Date().getTime();
+        var maxTime = parseInt((Math.random()*2+2)*60000);
+        var doTaskTime = parseInt((Math.random()*1)*60000);
+        console.log('maxTime:' + maxTime + '  doTaskTime:' + doTaskTime);
+
+        var failedCount = 0;
+        while ((new Date().getTime() - appStartTime) < maxTime) {
+            scroll('up', {distance: Math.random()*0.05+0.95, duration: parseInt(Math.random()*200+300), afterWait: 1000});
+            if (prob(30)) {
+                scroll('up', {distance: Math.random()*0.05+0.95, duration: parseInt(Math.random()*200+300), afterWait: 1000});
+            }
+            console.log('滚动');
+
+            var doIndex = 1;
+            while (true) {
+                console.log('开始阅读了');
+                var ret = findView('id:com.baidu.searchbox.lite:id/c8', {failed: exitPopup});
+                if (ret.length <= 0) {
+                    console.log('没有找到容器');
+                    back();
+                    failedCount+=1;
+                    refresh();
+                    switchPage('txt:百度', 'txt:推荐', {click:true, failed: exitPopup});
+                    break;
+                } else {
+                    console.log('找到容器了');
+                    container = ret.views[0];
+                    failedCount = 0;
+                }
+
+                var doCount = container.size - 1;
+
+                console.log('doIndex:' + doIndex + '  doCount:' + doCount + '  size:' + container.size);
+                if (doIndex >= doCount) {
+                    console.log('过大了--');
+                    break;
+                }
+
+                var needBackFirst = true;
+                var child = container[doIndex];
+                if (child) {
+                    ret = findView('txt:广告|id:com.baidu.searchbox.lite:id/aoh', {root: child});
+                    if (ret.length > 0 && ret.tag == '广告') {
+                        console.log('是广告 跳过 id:' + child.id);
+                        needBackFirst = false;
+                    } else {
+                        var videoTime = 0;
+                        if (ret.length > 0) {
+                            // 视频
+                            videoTime = parseTime(ret.views[0].text);
+                            console.log('视频changdu:' + ret.views[0].text + '  time:' + videoTime);
+                        }
+                        click(child, {afterWait: 3000});
+                        var ret = findView('id:com.baidu.searchbox.lite:id/dxg', {failed:exitPopup});
+                        if (ret.length > 0) {
+                            if (rsCurWindowClassName == 'com.baidu.searchbox.feed.news.FeedDetailActivity') {
+                                var index = 0, scrollCount = parseInt(Math.random()*4+6);
+                                console.log('进入新闻 scrollCount:' + scrollCount);
+                                while (index < scrollCount) {
+                                    scroll('up', {distance: Math.random()*0.25+0.1, duration: parseInt(Math.random()*200+300), afterWait: parseInt(Math.random()*1500+1000)});
+                                    ret = findView('cn:android.webkit.WebView', {failed: exitPopup});
+                                    if (ret.length > 0) {
+                                        var fullTextView = findView('txt:不喜欢');
+                                        if (fullTextView.length > 0) {
+                                            console.log('阅读到结尾了');
+                                            break;
+                                        }
+                                    } else {
+                                        console.log('没有找到webview');
+                                        break;
+                                    }
+
+                                    index += 1;
+                                }
+
+                            } else if (rsCurWindowClassName == 'com.baidu.searchbox.video.feedflow.VideoFlowActivity') {
+                                console.log('进入视频');
+                                var maxVideoTime = parseInt((Math.random()*0.3 + 0.4) * 60000), videoStartTime = new Date().getTime();
+                                console.log('video time:' + (maxVideoTime / 1000));
+                                if (maxVideoTime > maxTime * 1000) {
+                                    maxVideoTime = maxTime * 1000;
+                                }
+                                while((new Date().getTime() - videoStartTime) < maxVideoTime) {
+                                    var ret = findView('txt:上滑看更多视频|txt:视频播放结束', {failed:exitPopup, maxStep:1});
+                                    if (ret.length > 0) {
+                                        console.log('播放完成');
+                                        break;
+                                    }
+
+                                    sleep(500);
+                                }
+                            }
+                        } else {
+                            console.log('进入其他页面，退出:' + rsCurWindowClassName);
+                        }
+                    }
+                } else {
+                    console.log('item is null');
+                    break;
+                }
+
+                back2Page('txt:我的|id:android:id/tabs', {failed: exitPopup, backFirst: needBackFirst});
+
+                if (new Date().getTime() - appStartTime >= doTaskTime) {
+                    console.log('start do task');
+                    doTask();
+                    doTaskTime = 99999999;
+                }
+
+                doIndex += 1;
+                if (prob(60)) {
+                    doIndex += 1;
+                    if (prob(30)) {
+                        doIndex += 1;
+                    }
+                }
+            }
+
+            if (failedCount > 3) {
+                console.log('失败，找不到容器，所以退出');
+                break;
+            }
+        }
+
+        console.log('finish run time:' + (new Date().getTime() - appStartTime));
+    }
+
+    exitAppDeal();
+    console.log('end');
+}
+
+function parseTime(str) {
+    var arr = str.split(':');
+    if (arr.length == 2) {
+        return parseInt(arr[0]) * 60 + parseInt(arr[1]);
+    }
+    return 0;
+}
+
+function doTask() {
+    var ret = switchPage('id:com.baidu.searchbox.lite:id/a0j', 'txt:现金收益', {click:true, failed:exitPopup});
+    if (ret.length > 0) {
+        console.log('进入任务');
+
+        // withdraw();
+
+        var target = 'txt:立即签到|txt:领取|txt:开心收下|txt^:观看视频再得|txt:提醒我领钱|txt:开宝箱得金币|txt:马上领取|txt$:完成今日任务';
+        ret = findView(target, {failed: exitPopup});
+        var index = 0;
+        while (ret.length > 0 && index < 10) {
+            console.log('找到任务:' + ret.tag + '  target:' + target);
+            if (ret.tag == '提醒我领钱') {
+                var root = ret.views[0].parent.parent.parent;
+                for (var item of root) {
+                    if (item.clickable) {
+                        click(item, {click: true, afterWait: 1000});
+                        break;
+                    }
+                }
+                target = target.replace('txt:提醒我领钱|', '');
+            } else if (ret.tag == '完成今日任务') {
+                for (var item of ret.views[0].parent.parent) {
+                    if (item.clickable) {
+                        click(item, {click: true});
+                        break;
+                    }
+                }
+            } else {
+                if (ret.tag == '开宝箱得金币' || ret.tag == '立即签到' || ret.tag == '领取') {
+                    target = target.replace('txt:' + ret.tag + '|', '');
+                }
+
+                click(ret.views[0], {afterWait: 1000});
+                click(ret.views[0], {click: true, afterWait: 3000});
+            }
+
+            ret = findView(target, {failed: exitPopup});
+            ++index;
+        }
+
+        withdraw();
+
+        console.log('scroll');
+        scroll('up', {distance: Math.random() * 0.1 + 0.6, duration: parseInt(Math.random()*200+300), afterWait:1000});
+
+        ret = findView('txt:看广告赚钱', {failed: exitPopup});
+        index = 0;
+        while (ret.length > 0 && index < 10) {
+            var find = false;
+            if (ret.tag == '开心收下') {
+                find = true;
+                click(item, {click: true, afterWait: 1000});
+            } else {
+                for (var item of ret.views[0].parent) {
+                    if (item.clickable) {
+                        if (item.length == 2 && item[0].text == '去完成') {
+                            find = true;
+                            click(item, {click: true, afterWait: 3000});
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (find) {
+                ret = findView('txt:看广告赚钱|txt:开心收下', {failed: exitPopup});
+            } else {
+                break;
+            }
+
+            ++index;
+        }
+
+        console.log('离开看广告了');
+        // back2Page('id:cn.youth.news:id/a0w', {failed:exitPopup});
+        //
+        scroll('down', {distance: Math.random()*0.1 + 0.9, duration: parseInt(Math.random()*200 + 300), afterWait:1000});
+    } else {
+        console.log('进入任务失败');
+    }
+
+    // 切换到首页
+    switchPage('txt:百度', 'txt:推荐', {click: true, failed: exitPopup});
+}
+
+function withdraw() {
+    var __day needWithdraw = true;
+    if (needWithdraw) {
+        console.log('准备提现');
+        var ret = switchPage('txt^:元', 'txt:去提现');
+        if (ret.length > 0) {
+            console.log('11');
+            var ret = switchPage('txt:去提现', 'txt^:总金额');
+            if (ret.length > 0) {
+                console.log('22:' + ret.views[0].parent.parent[1].text);
+                var money = parseFloat(ret.views[0].parent.parent[1].text);
+                console.log('money:' + money);
+                if (money >= 0.6) {
+                    ret = findView('txt:快速提现');
+                    if (ret.length > 0) {
+                        console.log('33');
+
+                        var index = 0;
+                        var curIndex = -1;
+                        for (var item of ret.views[0].parent.parent) {
+                            if (item.size == 1) {
+                                var txt = '';
+                                if (item[0].size == 0) {
+                                    txt = item[0].text;
+                                } else {
+                                    txt = item[0][0].text;
+                                }
+                                var arr = txt.fetchNumber();
+                                if (arr.length == 1) {
+                                    console.log('find :' + arr[0]);
+                                    if (arr[0] <= money && arr[0] <= 1) {
+                                        curIndex = index;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                            }
+                            ++index;
+                        }
+
+                        if (curIndex > -1) {
+                            click(ret.views[0].parent.parent[curIndex], {afterWait: 2000});
+                            ret = findView('txt:提现到微信');
+                            if (ret.length > 0) {
+                                click(ret.views[0], {click: true, afterWait: 3000});
+                                needWithdraw = false;
+                            } else {
+                                console.error('找不到提现到微信');
+                            }
+                        } else {
+                            console.error('没找到合适的价格');
+                        }
+                    }
+                }
+            } else {
+                console.error('总金额失败');
+            }
+
+            back2Page('txt:我的|id:android:id/tabs');
+        } else {
+            console.error('进入提现失败');
+        }
+    }
+}
+
+function checkEnterAD() {
+    if ('com.baidu.searchbox.ad.lp.reward.AdVideoRewardActivity'.includes(rsCurWindowClassName)) {
+        return true;
+    }
+    return false;
+}
+
+function dealAD() {
+    if (checkEnterAD()) {
+        console.log('enter ad');
+        var startTime = new Date().getTime();
+
+        if (rsCurWindowClassName == 'com.baidu.searchbox.lightbrowser.ImmerseBrowserActivity') {
+            while (new Date().getTime() - startTime < 30000) {
+                var ret = findView('txt:恭喜已得金币|', {maxStep:1});
+                if (ret.length > 0) {
+                    back2Page('txt:我的|id:android:id/tabs', {failed: exitPopup});
+                    break;
+                }
+            }
+        } else if (rsCurWindowClassName == 'com.baidu.searchbox.ad.lp.reward.AdVideoRewardActivity') {
+            // id：com.baidu.searchbox.lite:id/progress_bar
+
+            sleep(18000);
+            var ret = findView('id:com.baidu.searchbox.lite:id/mk');
+            if (ret.length > 0) {
+                for (var item of ret.views[0]) {
+                    if (item.className == 'android.widget.ImageView' && item.clickable) {
+                        click(item, {click: true});
+                        break;
+                    }
+                }
+            }
+        }
+
+        console.log('退出了广告');
+        return true;
+    }
+}
+
+function exitPopup() {
+    var ret = findView('txt^:百度极速版将使用|txt:去看看别的任务|txt:今日任务已完成，明天再来吧~|txt:忽略|txt:开心收下|txt:下次再说|txt:继续赚钱|txt^:再看一个领取', {maxStep: 1});
+    if (ret.length > 0) {
+        console.log('找到:' + ret.tag);
+        if (ret.tag == '百度极速版将使用') {
+            clickByTag('txt:关闭', {click: true});
+        } else if (ret.tag == '今日任务已完成，明天再来吧~' || ret.tag == '去看看别的任务') {
+            back({afterWait: 2000});
+        } else {
+            click(ret.views[0], {click: true, afterWait: 3000});
+        }
+        return true;
+    }
+
+    ret = findView('txt^:看视频领|txt^:看视频翻|txt^:看视频再赚|txt:知道了', {maxStep: 1});
+    if (ret.length > 0) {
+        console.log('找到:' + ret.tag);
+        click(ret.views[0], {click:true, afterWait:4000});
+        return true;
+    }
+
+    ret = findView('id^:com.android.contacts:id', {maxStep: 1});
+    if (ret.length > 0) {
+        console.log('contact');
+        refresh();
+        return true;
+    }
+
+    if (!globalExitPopup()) {
+        return dealAD();
+    }
+
+    return false;
+}
+
+function cbWindowChange(textList, className, packageName, event) {
+    if (className=='com.bytedance.sdk.openadsdk.core.widget.a') {
+        console.log('放弃奖励---');
+        clickByTag('txt:放弃奖励', {click:true});
+    } else if(className=='com.baidu.mobads.AppActivity') {
+        console.log('为您推荐---');
+
+        var ret = findView('txt:为您推荐');
+        if (ret.length > 0) {
+            click(ret.views[0].parent[0], {click:true});
+        }
+    } else if(className=='android.app.Dialog' || className=='com.xiaomi.market.ui.detail.AppDetailActivityInner' || className=='cn.youth.news.ui.homearticle.dialog.HomePromptDialog' || className=='android.app.AlertDialog' || className=='cn.youth.news.ui.homearticle.dialog.VideoDetailsEnterDialog' || className=='cn.youth.news.ui.homearticle.dialog.HomePushDialog' || className=='cn.youth.news.ui.homearticle.dialog.HomeTaskCenter7DayBottomDialog') {
+        console.log('跳过---');
+        back({beforeWait:1000});
+    } else if(className=='cn.youth.news.ui.splash.SplashAdActivity') {
+        console.log('跳过广告---');
+        clickByTag('id:cn.youth.news:id/tt_splash_skip_btn', {click:true});
+    } else if(className=='com.tencent.mm.plugin.webview.ui.tools.SDKOAuthUI') {
+        console.log('同意微信登录---');
+        clickByTag('txt:同意');
+    } else {
+        return false;
+    }
+    return true;
+}
+
+function cbNotification(textList, className, packageName, event) {
+    console.log('Notification textList:' + textList + '  className:' + className + '  packageName:' + packageName);
+    for (var item of textList) {
+        if (item.includes('您的验证码为')) {
+            console.log('进入通知处理:' + item);
+            var subText = item.substring(item.indexOf('验证码为') + '验证码为'.length, item.indexOf(','));
+            console.log('验证码为:' + subText);
+            pasteById('cn.youth.news:id/i4', subText.substring(0, 1), {afterWait:1000});
+            pasteById('cn.youth.news:id/i5', subText.substring(1, 2), {afterWait:1000});
+            pasteById('cn.youth.news:id/i6', subText.substring(2, 3), {afterWait:1000});
+            pasteById('cn.youth.news:id/i7', subText.substring(3, 4), {afterWait:1000});
+            return true;
+        }
+    }
+    return false;
+}

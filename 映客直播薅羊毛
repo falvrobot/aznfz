@@ -1,0 +1,441 @@
+var sShouldExit = false;
+var sPreADTimeout = false;
+
+function main() {
+    var ret = launchApp('com.ingkee.lite', 'id:com.ingkee.lite:id/c61', {failed: skipAD, maxStep: 30});
+    if (ret.length <= 0) {
+        console.log('找不到容器，退出');
+        return;
+    }
+
+    doTask();
+
+    ret = smartFindView('id:com.ingkee.lite:id/b0p', {flag: 'find_all', failed: exitPopup});
+    if (ret.length > 0) {
+        var index = parseInt(Math.random()*ret.views.length);
+        click(ret.views[index], {click: true, afterWait: 6000});
+        if (rsCurWindowClassName=='com.meelive.ingkee.business.room.ui.activity.RoomActivity') {
+            console.log('进入直播间');
+            var index = 0, zbCount = 2;
+            while (index < zbCount) {
+                var sTime = new Date().getTime(), maxTime = parseInt(Math.random()*20000+50000);
+                while (new Date().getTime() - sTime < maxTime) {
+                    ret = smartFindView('txt:赚钱任务|txt:直播已结束');
+                    if (ret.length <= 0) {
+                        console.log('没找到赚钱任务，换一个');
+                        break;
+                    }
+                }
+
+                scroll('up', {distance: Math.random()*0.05+0.95, duration: parseInt(Math.random()*300+300)});
+                ++index;
+            }
+
+            back();
+            console.log('离开直播间');
+        } else {
+            console.log('进入直播间失败');
+        }
+    }
+
+    doTask();
+
+    console.log('finish');
+
+    exitAppDeal();
+    console.log('end');
+}
+
+function skipAD() {
+    var ret = findView('id:com.dragon.read:id/ari', {maxStep: 1});
+    if (ret.length > 0) {
+        back({afterWait: 2000});
+        return;
+    }
+
+    exitPopup();
+}
+
+function doTask() {
+    console.log('start task');
+    var ret = switchPage('id:com.ingkee.lite:id/amy', 'txt:来赚钱', {maxStep:10, failed: exitPopup});
+    if (ret.length > 0) {
+        console.log('进入 task');
+        // withdraw();
+
+        var __day dNeedShare = true;
+        var __day dNeedCheckIn = true;
+        var target = 'id:sign-btn|txt:去分享|id:can-open-box|txt:领金币|txt:服务器开小差了，请稍后再试';
+        if (dNeedShare) {
+            target += 'txt:分享映客极速版|';
+        }
+        if (dNeedCheckIn) {
+            target += 'txt:签到领金币|';
+        }
+        var count = 0, scrollCount = 0;
+
+        while (scrollCount <=3 && target != '' && count < 20) {
+            ret = smartFindView(target, {flag:'traverse_invisible', failed: exitPopup});
+            console.log('target:' + target);
+
+            if (ret.length <= 0) {
+                console.log('not find dNeedShare:' + dNeedShare + '  dNeedCheckIn:' + dNeedCheckIn);
+                if (dNeedShare || dNeedCheckIn) {
+                    scroll('up', {distance: 0.9, afterWait: 2000});
+                } else {
+                    console.log('不需要scroll，直接退出');
+                    break;
+                }
+                ++scrollCount;
+            } else {
+                console.log('tag:' + ret.tag);
+                if (ret.tag == 'can-open-box') {
+                    click(ret.views[0], {afterWait: 4000});
+                } else if (ret.tag == '领金币') {
+                    if (ret.views[0].top <rsScreenHeight/2) {
+                        click(ret.views[0].parent, {afterWait: 4000});
+                        back2Page('txt:来赚钱', {failed: exitPopup, backFirst: false});
+                    }
+
+                    target = target.replace('txt:领金币|', '');
+                } else if (ret.tag == 'sign-btn') {
+                    click(ret.views[0], {afterWait: 2000});
+                } else if (ret.tag == '分享映客极速版') {
+                    var text = ret.views[0].parent[ret.views[0].parent.size-1].text;
+                    if (text=='去赚钱') {
+                        click(ret.views[0], {click: true});
+                        share();
+                    } else if (text == '已完成') {
+                        dNeedShare = false;
+                    }
+                    target = target.replace('txt:分享映客极速版|', '');
+                } else if (ret.tag == '签到领金币') {
+                    var text = ret.views[0].parent[ret.views[0].parent.size-1].text;
+                    if (text == '去签到') {
+                        click(ret.views[0].parent[ret.views[0].parent.size-1], {click: true, afterWait: 2000});
+                        ret = findView('id:sign-btn|txt:立即签到', {flag: 'traverse_invisible'});
+                        if (ret.length > 0) {
+                            click(ret.views[0], {afterWait: 1000});
+                            click(ret.views[0], {click: true, afterWait: 1000});
+                            console.log('签到成功');
+                        } else {
+                            console.log('签到失败');
+                        }
+                    } else {
+                        dNeedCheckIn = false;
+                    }
+                    target = target.replace('txt:签到领金币|', '');
+                } else if (ret.tag == '去分享') {
+                    gestureClick(sScreenWidth/2, 200, {afterWait:2000});
+                } else if (ret.tag == '服务器开小差了，请稍后再试') {
+                    clickByTag('txt:确定', {afterWait:2000});
+                } else if (ret.tag == '立即签到') {
+                    click(ret.views[0], {click: true});
+                }
+
+                ++count;
+            }
+        }
+
+        back2Page('txt:推荐', {failed: exitPopup});
+        console.log('任务结束');
+    } else {
+        console.log('进入任务失败');
+    }
+}
+
+function share() {
+    switchPage('txt:朋友圈', 'txt:发表', {click: true, failed: exitPopup});
+    back2Page('txt:来赚钱', {failed: exitPopup});
+}
+
+function checkEnterAD() {
+    if ('com.meelive.ingkee.adcomponent.impl.dialog.NativeAdDialog|com.sigmob.sdk.base.common.AdActivity|com.bytedance.sdk.openadsdk.activity.base.TTPlayableWebPageActivity|com.bytedance.sdk.openadsdk.activity.base.TTWebPageActivity|com.qq.e.ads.PortraitADActivity|com.qq.e.ads.RewardvideoPortraitADActivity|com.bytedance.sdk.openadsdk.activity.base.TTRewardExpressVideoActivity|com.miui.zeus.mimo.sdk.ad.reward.RewardVideoAdActivity'.includes(rsCurWindowClassName)) {
+        return true;
+    }
+    var ret = findView('txt*:后发放|腾讯社交联盟广告|txt^:奖励将于|txt*:获得奖励|txt$:后可领取奖励|txt$:后可领取金币|txt$:后可领金币|id:com.ingkee.lite/video_view|id:com.ingkee.lite:id/mimo_reward_root_view|id:com.ingkee.lite:id/tt_reward_root', {maxStep:1});
+    if (ret.length > 0) {
+        console.log('force enter :' + ret.tag);
+        return true;
+    }
+
+    ret = findView('关闭广告|txt^:奖励将于|txt*:获得奖励|txt$:后可领取奖励|txt$:后可领取金币|txt$:后可领金币', {maxStep: 1});
+    if (ret.length > 0) {
+        if (!ret.views[0].text.includes('浏览分类') && !ret.views[0].text.includes('完成阅读')) {
+            console.log('force enter:' + ret.tag);
+            return true;
+        }
+    }
+    return false;
+}
+
+function dealAD() {
+    if (checkEnterAD()) {
+        console.log('enter ad');
+        sleep(3000);
+        var isFindClose = false;
+        var startTime = new Date().getTime();
+        while (new Date().getTime() - startTime < 60000) {
+            var ret = findView('txt:来赚钱|txt:赚更多金币|txt:恭喜获得|txt:天天领红包|txt:继续赚钱|txt:提现|id:com.ingkee.lite:id/brj', {flag:'traverse_invisible', maxStep:1});
+            if (ret.length > 0) {
+                console.log('找到标记，说明没有进入广告：' + ret.tag);
+                if (ret.tag == '赚更多金币') {
+                    back();
+                }
+                break;
+            }
+
+            ret = findView('txt^:参与互动|txt^:浏览页面|txt:放弃奖励|txt:继续浏览|txt^:完成观看|txt:恭喜获得奖励', {maxStep: 1});
+            if (ret.length > 0) {
+                console.log('tag:' + ret.tag);
+                if (ret.views[0].text.includes('浏览页面')) {
+                    if (ret.views[0].text.includes('领取奖励')) {
+                        click(ret.views[0]);
+                    }
+                } else if (ret.tag = '完成观看') {
+                    clickByTag('id:com.ingkee.lite:id/gh');
+                } else if (ret.tag = '恭喜获得奖励') {
+                    sleep(2000);
+                    var find = false;
+                    for (var item of ret.views[0].parent) {
+                        if (item.clickable) {
+                            click(item, {click: true});
+                            find = true;
+                            break;
+                        }
+                    }
+
+                    if (!find) {
+                        back();
+                    }
+                    break;
+                } else {
+                    click(ret.views[0]);
+                }
+            }
+
+            ret = findView('cn:android.widget.ImageView', {flag:'find_all', maxStep:1});
+            if (ret.length > 0) {
+                for (var item of ret.views) {
+                    if (!item.clickable) {
+                        if (item.width == item.height && item.width > 10 * rsDensity && item.width < 20 * rsDensity && item.left > 8 * rsScreenWidth / 9 && item.top < 25 * rsDensity) {
+                            click(item);
+                            break;
+                        }
+                    } else {
+                        if (item.width == item.height) {
+                            if (item.width>25*rsDensity && item.width<45*rsDensity) {
+                                if ((item.left<25*rsDensity) &&(item.top<75*rsDensity)) {
+                                    click(item);
+                                    break;
+                                } else if (item.parent.size==2) {
+                                    click(item);
+                                    break;
+                                }
+                            }
+                        } else {
+                            if ((item.right>rsScreenWidth-40) && (item.parent.size==4) && (item.width<35*rsDensity) && (item.height<40*rsDensity)) {
+                                click(item);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            ret = findView('cn:android.view.View', {flag:'clickable|find_all', maxStep: 1});
+            if (ret.length > 0) {
+                for (var item of ret.views) {
+                    if (item.parent && item.parent.parent && (item.parent.parent.size==2) && (item.width<35*rsDensity)&& (item.height<45*rsDensity) &&(item.left<25*rsDensity) &&(item.top<40*rsDensity)) {
+                        console.log('find 左上角箭头');
+                        click(item, {click: true});
+                    }
+                }
+            }
+
+
+            ret = findView('id:com.ingkee.lite:id/mimo_reward_close_img|id:com.ingkee.lite:id/img_close|id:com.ingkee.lite:id/tt_video_ad_close_layout|id:com.ingkee.lite:id/tt_titlebar_back', {maxStep: 1});
+            if (ret.length > 0) {
+                console.log('找到右上角x');
+                click(ret.views[0], {click: true});
+            }
+
+            globalDealAD();
+        }
+
+        if (new Date().getTime() - startTime >= 60000) {
+            console.log('timeout');
+            if (checkEnterAD() && sPreADTimeout) {
+                back();
+                console.log('网络太差卡住了');
+                sShouldExit = true;
+            }
+
+            back();
+            refresh();
+            sPreADTimeout = true;
+        } else {
+            sPreADTimeout = false;
+
+            if (new Date().getTime() - startTime < 10000) {
+                if (checkEnterAD()) {
+                    console.log('广告时间太短，说明很有可能是广告的windowClass没有变更');
+                    refresh();
+                }
+            }
+        }
+
+        console.log('退出广告');
+        return true;
+    }
+}
+
+function skipAD() {
+    var ret = findView('txt*:跳过', {maxStep: 1});
+    if (ret.length > 0) {
+        click(ret.views[0], {click: true});
+        return true;
+    }
+
+    exitPopup();
+}
+
+function exitPopup() {
+    if (sShouldExit) {
+        return;
+    }
+
+    var ret = findView('txt:我知道了|txt:去点金豆赚钱|txt:关注并回戳|txt:继续浏览|txt:看视频金币翻倍|txt*:完成观看|txt:网页无法打开|txt:恭喜获得奖励', {maxStep:1});
+    if (ret.length > 0) {
+        console.log('text:' + ret.tag + '  phoneNumber:' + rsPhoneNumber);
+        if (ret.tag == '我知道了' || ret.tag == '去点金豆赚钱' || ret.tag == '关注并回戳' || ret.tag == '继续浏览' || ret.tag == '看视频金币翻倍') {
+            click(ret.views[0], {click: true, afterWait: 2000});
+        } else if (ret.tag == '完成观看') {
+            clickByTag('id:com.ingkee.lite:id/gj', {click: true});
+        } else if (ret.tag == '网页无法打开' || ret.tag == '恭喜获得奖励') {
+            back({afterWait: 2000});
+        } else {
+            click(ret.views[0]);
+        }
+        return true;
+    }
+
+
+    ret = findView('cn:android.widget.ImageView|cn:android.widget.Image', {flag:'clickable|find_all', maxStep: 1});
+    if (ret.length > 0) {
+        if (ret.tag == 'android.widget.ImageView') {
+            for (var item of ret.views) {
+                if (item.width==item.height && item.height<=45*rsDensity && item.height>=25*rsDensity && item.top<50*rsDensity && item.parent.size==2) {
+                    click(item, {click: true});
+                    return true;
+                }
+            }
+        } else {
+            for (var item of ret.views) {
+                if ((item.parent.size==3) && (item.width>300*rsDensity)) {
+                    var ok = true;
+                    for (var child of item.parent) {
+                        if (!child.clickable) {
+                            ok = false;
+                        }
+                    }
+                    if (ok) {
+                        console.log('找到垃圾的一比弹出框，点击右上角的x');
+                        gestureClick(item.right-25*rsDensity, item.top+25*rsDensity);
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    ret = findView('id:com.ingkee.lite:id/tt_bu_close|id:com.ingkee.lite:id/tt_insert_dislike_icon_img|id:com.ingkee.lite:id/brj|id:com.miui.contentcatcher:id/user_suggestion_item', {maxStep: 1});
+    if (ret.length > 0) {
+        console.log('tag:' + ret.tag);
+        if (ret.tag == 'com.miui.contentcatcher:id/user_suggestion_item') {
+            console.log('第二认证了');
+            click(ret.views[0].parent);
+            ret = findView('txt:认证');
+            if (ret.length > 0) {
+                console.log('点击认证');
+                click(ret.views[0]);
+            } else {
+                console.log('找不到输入验证码的框');
+            }
+        } else if (ret.tag == 'com.ingkee.lite:id/brj') {
+            var t = findView('txt:看视频金币翻倍');
+            if (t.length > 0) {
+                click(t.views[0], {click: true, afterWait: 4000});
+            } else {
+                click(ret.views[0], {click: true});
+            }
+        } else {
+            click(ret.views[0], {click: true});
+        }
+        return true;
+    }
+
+    ret = findView('txt:微信登录|txt:仅在使用中允许|txt:始终允许|txt:个人信息保护指引|txt:你的微信头像、昵称、地区和性别信息|txt:设置独特的身份', {maxStep: 1});
+    if (ret.length > 0) {
+        console.log('tag:' + ret.tag);
+        if (ret.tag == '个人信息保护指引' || ret.tag =='你的微信头像、昵称、地区和性别信息') {
+            clickByTag('txt:同意', {click: true});
+        } else if (ret.tag == '微信登录') {
+            clickByTag('id:com.ingkee.lite:id/bin', {click: true, afterWait: 500});
+            click(ret.views[0], {click: true});
+        } else if (ret.tag == '设置独特的身份') {
+            if (prob(50)) {
+                clickByTag('id:com.ingkee.lite:id/bxj', {click: true});
+            } else {
+                clickByTag('id:com.ingkee.lite:id/bxi', {click: true});
+            }
+            clickByTag('txt:确定', {click: true});
+        } else {
+            click(ret.views[0], {click: true});
+        }
+        return true;
+    }
+
+    if (!globalExitPopup()) {
+        return dealAD();
+    }
+
+    return false;
+}
+
+function cbWindowChange(textList, className, packageName, event) {
+    if ('com.meelive.ingkee.adcomponent.impl.dialog.CustomNativeAdPage|com.meelive.ingkee.webkit.ui.InKeWebDialog|com.meelive.ingkee.adcomponent.impl.thaw_concurrency.HallGiftBoxDialog|com.meelive.ingkee.business.room.poke.PokeCallBackDialog'.includes(className)) {
+        back();
+    } else if(className=='com.bytedance.news.components.ug.push.permission.c.f' || className=='com.ss.android.newmedia.activity.browser.BrowserActivity' || className=='com.ss.android.article.a.b.a') {
+        back({beforeWait: 1000});
+    } else if(className=='com.meelive.ingkee.business.me.dialog.MineUploadInfoDialog') {
+        clickByTag('txt:狠心离开', {click: true, beforeWait: 1000});
+    } else {
+        return false;
+    }
+    return true;
+}
+
+function cbNotification(textList, className, packageName, event) {
+    console.log('Notification textList:' + textList + '  className:' + className + '  packageName:' + packageName);
+    for (var item of textList) {
+        if (item.includes('验证码')) {
+            console.log('进入通知处理:' + item);
+            var arr = item.fetchInteger();
+            if (arr.length > 0) {
+                var subText = arr[0] + '';
+                console.log('验证码为:' + subText);
+                var ret = findView('txt:请输入验证码');
+                if (ret.length > 0) {
+                    paste(ret.views[0], subText, {afterWait: 1000});
+                    clickByTag('txt:认证', {click: true});
+                } else {
+                    console.log('找不到输入验证码的框');
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
+

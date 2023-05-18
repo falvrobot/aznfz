@@ -1,6 +1,4 @@
 
-import sys_xiaomi_runtime;
-
 var sShouldExit = false;
 
 function main() {
@@ -10,13 +8,8 @@ function main() {
         return;
     }
 
-    if (!smartLaunchApp('com.cto51.student', false, true, 0)) {
-        console.error('启动app失败');
-        return;
-    }
-
-    var ret = waitAppLaunched('txt:博客|txt:我的', {failed: exitPopup, maxStep: 30, beforeWait: 3000});
-    if (ret.length > 0) {
+    var ret = launchApp('com.cto51.student', 'txt:博客|txt:我的', {failed: exitPopup, maxStep: 30, beforeWait: 3000});
+    if (1 == ret) {
         console.log('进入程序');
 
         var __day checkIn = false;

@@ -1,0 +1,242 @@
+var temp = null;
+var ret = null;
+var view = null;
+var viewContainer = null;
+var tag = null;
+var item = null;
+var index = null;
+var data = '';
+var text = '';
+var firstName = '';
+var exit = true;
+var like = null;
+var title = '';
+var comment = 'null';
+var video = null;
+var confirmLook = null;
+var exitApp = null;
+var firstVideoName = null;
+var top = null;
+
+function main() {
+ var ret = launchApp('com.tencent.mm', 'txt^:微信', {maxStep: 30});
+    if (1 != ret) {
+        console.log('进入微信失败');
+        return;
+    }
+    
+    var ret = switchPage('txt:我', 'txt:视频号', {click: true,duration: 500,maxStep: 5});
+    if (ret.length > 0) {
+        console.log('进入我的');
+        var ret = switchPage('txt:视频号', 'txt*:人关注', {duration: 500,maxStep: 15});
+        if (ret.length > 0) {
+            // 获取名称
+            var username = ret.views[0].parent.parent.parent.parent[0][-1][-1][0][0].text;
+            console.log('进入视频号:' + username);
+        
+            video = [];
+            firstVideoName = '';
+            top = 0;
+            while (true) {
+                var indexR = 0;
+                while (true) {
+                    var ret = findView('cn:androidx.recyclerview.widget.RecyclerView', {flag:'find_all'});
+                    if (ret.length <= 0) {
+                        console.log('找不到recyclerview');
+                        break;
+                    }
+                    var viewContainer = ret.views[-1];
+                    if (indexR >= viewContainer.length) {
+                        console.log('len is invalide indexR:' + indexR);
+                        break;
+                    }
+                    var item = viewContainer[indexR];
+                    click(item, {click: true, afterWait: 1000});
+                    var ret = findView('txt:浮窗', {maxStep: 10, afterWait: 2000});
+                    if (ret.length > 0) {
+                        console.log('进入了视频');
+                        confirmLook = true;
+                        var ck = '', dz = '', zf = '', xh = '', hf = '';
+                        var ret = findView('cn:androidx.recyclerview.widget.RecyclerView');
+                        if (ret.length > 0) {
+                            var text = ret.views[0][0][-2][0][0][0][0].text;
+//                            var text = ret.views[0][0][3][0][0][0][0].text;
+                            console.log('找到文本:' + text);
+                            var arr = text.split('\n');
+                            console.log('找到目标文本:' + arr[0]);
+                            title = arr[0];
+
+                            ck = ret.views[0][0][-2][1][0][0][-1].text;
+                            dz = ret.views[0][0][-2][1][-1][0][-1].text;
+                            zf = ret.views[0][0][-2][1][-1][1][-1].text;
+                            xh = ret.views[0][0][-2][1][-1][2][-1].text;
+                            hf = ret.views[0][0][-2][1][-1][3][-1].text;
+
+                            /*
+                            ck = ret.views[0][0][3][1][0][0][-1].text;
+                            dz = ret.views[0][0][3][1][-1][0][-1].text;
+                            zf = ret.views[0][0][3][1][-1][1][-1].text;
+                            xh = ret.views[0][0][3][1][-1][2][-1].text;
+                            hf = ret.views[0][0][3][1][-1][3][-1].text;*/
+                            console.log('ck:' + ck + '  dz:' + dz + '  zf:' + zf + '  xh:' + xh + '  hf:' + hf);
+                        } else {
+                            console.log('没找到recyclerview');
+                            title = '';
+                        }
+
+                        if (indexR == 0) {
+                            console.log('一页的第一个视频:' + title + ' top:' + item.top);
+                            if (firstVideoName == title) {
+                                var d = top - item.top;
+                                console.log('d:' + d);
+                                if ((d >= 0 && d < 20) || (d < 0 && d > -20)) {
+                                    console.log('已经滚动到视频列表的最底部了，该结束啦');
+                                    exitApp = true;
+                                    break;
+                                }
+                            }
+                            top = item.top;
+                            firstVideoName = title;
+                        }
+
+                        if (video.indexOf(title) < 0) {
+                            video.push(title);
+                        } else {
+                            console.log('已经看过该视频了，不再看啦');
+                            confirmLook = false;
+                        }
+                        if (confirmLook) {
+                            // 点赞处理
+//                            click(ret.views[0][0][3][1][-1][0], {click: true, afterWait: 2000});
+                            click(ret.views[0][0][-2][1][-1][0], {click: true, afterWait: 2000});
+                            console.log('进入了点赞');
+                            firstName = '';
+                            exit = true;
+                            like = [];
+                            while (true) {
+                                var indexX = 0;
+                                var ret = findView('id:com.tencent.mm:id/n81', {flag: 'find_all'});
+                                for (var item of ret.views) {
+                                    if (indexX == 0) {
+                                        if (item.text == firstName) {
+                                            exit = true;
+                                            console.log('退出循环');
+                                            break;
+                                        } else {
+                                            exit = false;
+                                            firstName = item.text;
+                                            console.log('set firstName:' +firstName);
+                                        }
+                                    }
+
+                                    if (like.indexOf(item.text) < 0) {
+                                        like.push(item.text);
+                                    }
+
+                                    ++indexX;
+                                }                                            
+
+                                console.log('滚动页面');
+                                scrollByTag('cn:androidx.recyclerview.widget.RecyclerView', 'up', {type: 2,afterWait: 2000});
+                                if (exit) {
+                                    break;
+                                }
+                            }
+                            console.log('点赞：' + like);
+                            clickByTag('txt$:人#|txt:喜欢过的人', {family:[0, 1],afterWait: 1000,click: true});
+
+                            // 评论处理
+                            var ret = switchPage('id:com.tencent.mm:id/bjq', 'txt*:评论', {
+                                click: true,duration: 500,maxStep: 5});
+                            if (ret.length > 0) {
+                                console.log('进入评论');
+                                firstName = '';
+                                exit = false;
+                                comment = [];
+                                while (true) {
+                                    var ret = findView('cn:androidx.recyclerview.widget.RecyclerView', {afterWait: 1000});
+                                    if (ret.length > 0) {
+                                        var container = ret.views[0];
+                                        var index = 0;
+                                        for (var item of container) {
+											if (item.className == 'android.widget.FrameLayout'){
+                                                if (item[0][0].className =='android.view.ViewGroup') {
+       											 	var name = item[0][0][1][0].text;
+                                                    var time = item[0][0][1][-1].text;
+                                                    var content = item[0][0][2][0].text;
+                                                    var t = name + '*#*' + content + '*#*' + time;
+                                                    if (index == 0) {
+                                                        if (firstName == t) {
+                                                            console.log('结束了');
+                                                            exit = true;
+                                                            break;
+                                                        } else {
+                                                            firstName = t;
+                                                            console.log('set firstName:' +firstName);
+                                                        }
+                                                    }
+
+                                                    if (strIsNotEmpty(name) && strIsNotEmpty(content)) {
+                                                        if (comment.indexOf(t) < 0) {
+                                                            comment.push(t);
+                                                        }
+                                                    } else {
+                                                        console.log('content is empty:' + t);
+                                                    }
+                                                }
+                                                                                               			 										++index;
+                                            }
+                                        }
+                                        
+                                        if (comment.length <= 0) {
+                                            console.log('没有评论');
+                                            break;
+                                        }
+                                    } else {
+                                        console.log('can not find container');
+                                        break;
+                                    }
+                                    
+                                    console.log('开始滚动');
+                                    scrollByTag('cn:androidx.recyclerview.widget.RecyclerView', 'up', {type: 2,afterWait: 2000});
+                                    if (exit) {
+                                        break;
+                                    }
+                                }
+                                console.log('评论：' + comment);
+                                clickByTag('txt$:条评论', {family:[0, 1],afterWait: 1000,click: true});
+                            }
+                            var obj = {ck:ck, dz:dz, zf:zf, xh:xh, hf:hf, title: title, like: like, comment: comment};
+                            var ret = callWebService('http://pdd.9bang.net/shipinhao_api.aspx', obj);
+                            console.log('obj:' + obj + '  ret:' + ret);
+                        }
+                        
+                        back2Page('txt:' + username, {duration: 500,maxStep: 5});
+//                        back2Page('txt*:人关注', {duration: 500,maxStep: 5});
+                    } else {
+                        console.log('进入视频失败');
+                    }
+                    ++indexR;
+                }
+                
+                if (exitApp) {
+                    console.log('退出应用啦');
+                    break;
+                }
+                console.log('开始滚动视频========》');
+                var ret = findView('cn:androidx.recyclerview.widget.RecyclerView', {flag:'find_all'});
+                if (ret.length > 0) {
+                    console.log('xxxx:' + ret.views[-1]);
+                    scroll('up', {type: 1, node:ret.views[-1],distance: 0.8, afterWait: 2000});
+                } else {
+                    console.log('滚动，没找到根,退出');
+                    break;
+                }
+            }
+        }
+    } else {
+        console.log('进入我的页面失败');
+    }
+
+    back2Page('txt:微信|txt:我', {duration: 500,maxStep: 8});
+}

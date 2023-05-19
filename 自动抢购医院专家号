@@ -1,0 +1,106 @@
+
+function main(name, date ='') {
+    home();
+    clickByTag('txt:江苏省xxx医院', {click: false});
+    var ret = findView('txt:预约挂号', {maxStep: 30});
+    if (ret.length <= 0) {
+        console.log('启动失败');
+        return;
+    }
+
+    var ret = switchPage('txt:预约挂号', 'txt:转到上一层级', {click: false, afterWait: 5000});
+    if (ret.length > 0) {
+        console.log('进入预约');
+
+    	var ret = switchPage('txt:预约类型', 'txt:去挂号', {family:[1,1], click: true, afterWait: 5000});
+        if (ret.length > 0) {
+            console.log('进入选择院区');
+			var ret = switchPage('txt:去挂号', 'cn:android.widget.EditText', { click: true});
+            if (ret.length > 0) {
+                console.log('进入挂号区');
+                clickByTag('txt:温馨提示', {family:[0, -1, 1], click: true, afterWait: 2000, maxStep: 8});
+                clickByTag('cn:android.widget.EditText', {click: true});
+                pasteByTag('cn:android.widget.EditText', name, {afterWait: 1000});
+                clickByTag('txt:查询', {click: true});
+                
+                while (true) {
+//                    var name = '袁斌', date = '11-07';
+                    var ret = switchPage('txt^:' + name + '@cn:android.view.View', 'txt:门诊排班', {click: true, maxStep: 8});
+                    if (ret.length > 0) {
+                        console.log('找到专家了');
+                        if (date != '') {
+                            clickByTag('txt:' + date, {click: true});
+                        }
+
+                        var ret = findView('txt:预约|txt:停诊|txt:约满', {flag: 'traverse_invisible', maxStep: 8});
+                        if (ret.length > 0) {
+                            console.log('ret.tag:', ret.tag);
+                            if (ret.tag == '预约') {
+                                console.log('find ===');
+                                click(ret.views[0], {click: true});
+                                pay();
+                                break;
+                            } else {
+                                back();
+                            }
+                        } else {
+                            console.log('not find ===');
+                        }
+                    } else {
+                        console.log('进入专家失败');
+                    }
+                }
+            } else {
+                console.log('进入挂号区失败');
+            }
+    	} else {
+        	console.log('进入选择院区失败');
+        }
+    } else {
+        console.log('进入预约失败');
+    }
+}
+
+function pay() {
+    var ret = findView('txt:挂号金额');
+    if (ret.length > 0) {
+        console.log('进入挂号');
+        var ret = findView('txt:分时段号源', {maxStep: 8});
+        if (ret.length > 0) {
+            var container = ret.views[0][0];
+            for (var item of container) {
+                if (item.length > 1) {
+                    var text = item[-1].text;
+                    if (text.startsWith('剩余号源数')) {
+                        var a = text.substring('剩余号源数'.length).trim();
+                        console.log('a:', a);
+                        if (a != '') {
+                            var r = parseInt(a);
+                            if (r > 0) {
+                                console.log('找到号源了');
+                                click(item, {click: true});
+                                var ret = findView('txt:我已阅读并同意');
+                                if (ret.length > 0) {
+                                    click(ret.views[0], {click: true});
+                                }
+                                clickByTag('txt:确定预约', {maxStep:8});
+                                
+                                clickByTag('txt:确定', {click: true});
+                                
+                                var ret = switchPage('txt:去支付', 'txt:立即支付');
+                                if (ret.length > 0) {
+                                    console.log('进入支付');
+                                } else {
+                                    console.log('没进入支付');
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        console.log('进入挂号失败');
+    }
+}

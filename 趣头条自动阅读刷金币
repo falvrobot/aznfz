@@ -1,0 +1,868 @@
+
+import 'sys_'+getManufacturer()+'_runtime';
+
+var sShouldExit = false, sPreADTimeout = false, sContainer, sEnterApp = false;
+
+function main() {
+    if (1!=launchApp('com.jifen.qukan', 'txt:关注', {failed: skipAD})) {
+        console.error('启动app失败');
+        return;
+    }
+
+    /*
+        if (!smartLaunchApp('com.jifen.qukan')) {
+            console.error('启动app失败');
+            return;
+        }
+
+        var ret = waitAppLaunched('id:com.jifen.qukan:id/m2', {failed: skipAD, maxStep: 30, beforeWait: 3000});
+        if (ret.length <= 0) {
+            console.log('找不到容器');
+            return;
+        } else {
+            sContainer = ret.views[0];
+        }
+    */
+    sEnterApp = true;
+
+    doTask();
+
+    var appStartTime = new Date().getTime();
+    if (prob(70)) {
+        readNews();
+        lookVideo();
+    } else {
+        lookVideo();
+        readNews();
+    }
+
+    exitAppDeal();
+    console.log('end');
+}
+
+function readNews() {
+    back2Page('txt:我的|txt:推荐|id:com.jifen.qukan:id/nf', {failed: exitPopup, backFirst: false});
+    var maxCheckTaskTime = parseInt((Math.random()*3+1)*60000), doMaxTime = parseInt((Math.random()*5+8)*60000);
+    var startTime = new Date().getTime();
+    switchPage('txt:头条|txt:刷新', 'txt:推荐', {failed: exitPopup, descendant:[-1, -1], click: true});
+    while (new Date().getTime() - startTime < doMaxTime && !sShouldExit) {
+        back2Page('txt:我的|txt:推荐|id:com.jifen.qukan:id/nf', {failed: exitPopup, backFirst: false});
+
+        scroll('up', {distance: Math.random()*0.05 + 0.95, duration: parseInt(Math.random()*200 + 300), afterWait: 1000});
+        if (prob(50)) {
+            scroll('up', {distance: Math.random()*0.09 + 0.8, duration: parseInt(Math.random()*200 + 300), afterWait: 1000});
+        }
+        if (prob(30)) {
+            scroll('up', {distance: Math.random()*0.09 + 0.8, duration: parseInt(Math.random()*200 + 300), afterWait: 1000});
+        }
+
+        var doIndex = 1, failedCount = 0;
+        while (!sShouldExit) {
+            var ret = smartFindView('id:com.jifen.qukan:id/m2', {failed: exitPopup, maxStep: 8});
+            if (ret.length <= 0) {
+                console.log('没有找到容器');
+                if (failedCount > 3) {
+                    sShouldExit = true;
+                    break;
+                } else {
+                    back({afterWait: 1000});
+                    failedCount++;
+                    refresh();
+                    switchPage('txt:头条|txt:刷新', 'txt:推荐', {failed: exitPopup, descendant:[-1, -1], click: true});
+                    continue;
+                }
+            } else {
+                sContainer = ret.views[0];
+                failedCount = 0;
+            }
+
+            var doCount = sContainer.length - 1;
+            if (doIndex >= doCount) {
+                break;
+            }
+
+            console.log('doIndex:' + doIndex);
+            var needBack = false, child = sContainer[doIndex];
+            if (child) {
+                if (child.className == 'android.widget.RelativeLayout') {
+                    click(child, {afterWait: 3000});
+                    needBack = true;
+
+                    if (rsCurWindowClassName=='com.jifen.qukan.content.newsdetail.news.NewsDetailNewActivity') {
+                        ret = smartFindView('cn:android.webkit.WebView', {failed: exitPopup});
+                        if (ret.length > 0) {
+                            var wvHeight = ret.views[0].height;
+                            // 是否存在圈
+                            ret = smartFindView('id:com.jifen.qukan:id/a3j|id:com.jifen.qukan:id/b0r', {failed: exitPopup});
+                            if (ret.length > 0) {
+                                var curTime = new Date().getTime(), maxTime = parseInt((Math.random()*0.5 + 0.2) * 60000);
+                                while (new Date().getTime() - curTime < maxTime && !sShouldExit) {
+                                    scroll('up', {distance: Math.random()*0.25 + 0.1, duration: parseInt(Math.random()*250+450), afterWait: parseInt(Math.random()*1500+1000)});
+                                    ret = smartFindView('cn:android.webkit.WebView', {failed: exitPopup});
+                                    if (ret.length <= 0 || ret.views[0].height < wvHeight) {
+                                        break;
+                                    }
+
+                                    // 阅读奖励
+                                    clickByTag('id:com.jifen.qukan:id/b0r', {afterWait: 4000, maxStep: 2});
+                                }
+                            } else {
+                                console.log('没有找到赚钱圈， 跳过一个，不看');
+                                doIndex++;
+                            }
+                        }
+                    } else if (rsCurWindowClassName=='com.jifen.qukan.content.videodetail.VideoDetailsActivity') {
+                        console.log('视频');
+                        var curTime = new Date().getTime(), maxTime = parseInt((Math.random()*0.4+0.2)*60000);
+                        while (new Date().getTime() - curTime < maxTime && !sShouldExit) {
+                            // 阅读奖励
+                            clickByTag('id:com.jifen.qukan:id/b0r', {afterWait: 4000, maxStep: 2});
+
+                            var ret = findView('txt:关闭广告');
+                            if (ret.length > 0) {
+                                break;
+                            }
+                        }
+                    } else {
+                        console.log('进入其他页面:' + rsCurWindowClassName);
+                    }
+                } else {
+                    console.log('广告，跳过');
+                }
+            } else {
+                break;
+            }
+
+            back2Page('txt:我的|txt:推荐|id:com.jifen.qukan:id/nf', {failed: exitPopup, backFirst: needBack});
+            getPeriodAward();
+            if (new Date().getTime() - startTime >= maxCheckTaskTime) {
+                doTask();
+                maxCheckTaskTime = 9999999;
+            }
+
+            ++doIndex;
+            if (prob(60)) {
+                ++doIndex;
+            }
+        }
+
+        sleep(500);
+    }
+}
+
+function lookVideo() {
+    back2Page('txt:我的|txt:推荐|id:com.jifen.qukan:id/nf', {failed: exitPopup, backFirst: false});
+    var ret = switchPage('id:com.jifen.qukan:id/nf', 'txt:推荐', {descendant:[1], click: true, failed: exitPopup});
+    if (ret.length > 0) {
+        console.log('进入视频');
+        var index = 0, count = parseInt(Math.random()*3+1);
+        while (index < count) {
+            // 播放按钮
+            ret = smartFindView('id:com.jifen.qukan.content.shell:id/ct', {flag: 'find_all', failed: exitPopup});
+            if (ret.length > 0) {
+                var size = ret.views.length;
+                var i = parseInt(Math.random()*size);
+                click(ret.views[i], {click: true, afterWait: 3000});
+                ret = smartFindView('id:com.jifen.qukan.content.shell:id/ct', {flag: 'find_all', failed: exitPopup});
+                if (ret.views.length < size) {
+                    console.log('成功播放视频');
+                    var sTime = new Date().getTime();
+                    while (new Date().getTime() - sTime < 32000) {
+                        // 阅读奖励
+                        clickByTag('id:com.jifen.qukan:id/b0r', {afterWait: 4000, maxStep: 2});
+                    }
+                } else {
+                    console.log('播放视频失败');
+                }
+            }
+
+            scroll('up', {distance: 0.9, duration: parseInt(Math.random()*200+300), afterWait:1000});
+            ++index;
+        }
+
+        console.log('看视频  结束');
+    }
+}
+
+function getPeriodAward() {
+    var ret = smartFindView('txt:领取|txt*:再领', {failed: exitPopup, maxStep: 1});
+    if (ret.length > 0) {
+        var view = ret.views[0];
+        click(view);
+        gestureClick((view.left+view.right)/2,(view.top+view.bottom)/2, {beforeWait: 4000});
+    }
+}
+
+function doTask() {
+    var ret = switchPage('txt:任务', 'txt:任务中心|txt:我的金币', {descendant:[-1, -1], click: true, failed: exitPopup});
+    if (ret.length <= 0) {
+        ret = switchPage('id:com.jifen.qukan:id/nf', 'txt:任务中心|txt:我的金币', {descendant:[3], click: true, failed: exitPopup});
+    }
+    if (ret.length > 0) {
+        console.log('enter task');
+        var __day dIsDoLookVideo = true;
+
+        withdraw();
+
+        var isFreshman = false, target = 'txt:最高|txt:领取奖励|txt:新手任务|txt:看小视频|txt^:立即领取|#find_all#txt:体验领金币|';
+        if (dIsDoLookVideo) {
+            target += 'txt:看视频领金币|';
+        }
+
+        ret = smartFindView(target, {flag: 'traverse_one_by_one', failed: exitPopup});
+        var index = 0;
+        while (ret.length > 0 && index < 10) {
+            console.log('tag:' + ret.tag);
+            if (ret.tag == '最高') {
+                click(ret.views[0], {afterWait: 4000});
+            } else if (ret.tag == '新手任务') {
+                isFreshman = true;
+                ret = findView('id:com.jifen.qukan:id/a4');
+                if (ret.length > 0) {
+                    console.log('找到新手红包');
+                    click(ret.views[0][0], {click:true, afterWait:2000});
+                    ret = findView('id:com.jifen.qukan:id/ag9');
+                    if (ret.length > 0) {
+                        console.log('领取新手红包');
+                        click(ret.views[0], {click: true});
+                    }
+
+                    back2Page('txt:我的|txt:任务中心|id:com.jifen.qukan:id/nf', {failed: exitPopup, backFirst: false});
+                }
+            } else if (ret.tag == '立即领取') {
+                click(ret.views[0], {click: true, afterWait: 2000});
+                if (ret.views[0].text == '立即领取') {
+                    back({afterWait: 2000});
+                }
+            } else if (ret.tag == '看小视频') {
+                if (ret.views[0].parent[2].text == '去观看') {
+                    click(ret.views[0].parent[2], {click: true, afterWait:2000});
+                }
+            } else if (ret.tag == '领取奖励') {
+                click(ret.views[ret.views.length - 1].parent, {click: true});
+                ret = smartFindView('id:com.jifen.qukan:id/b_0', {flag: 'find_all', failed: exitPopup});
+                if (ret.length > 0) {
+                    console.log('领取任务奖励');
+                    click(ret.views[ret.views.length-1], {click: true, afterWait: 4000});
+                }
+            } else if (ret.tag == '体验领金币') {
+                var index = 0;
+                while (ret.views.length > 1 && index < 5) {
+                    var find = false;
+                    for (var item of ret.views) {
+                        if (item.parent[0].length == 4) {
+                            for (var child of item.parent[0]) {
+                                if (child.className == 'android.widget.TextView') {
+                                    console.log('child text:' + child.text);
+                                    var arr = child.text.fetchInteger(1);
+                                    if (arr.length > 0 && arr[0] > 10) {
+                                        find = true;
+                                        click(ret.views[1], {click: true, afterWait: 20000});
+                                        back2Page('txt:我的|txt:任务中心|id:com.jifen.qukan:id/nf', {failed: exitPopup});
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        if (find) {
+                            break;
+                        }
+                    }
+
+                    if (find) {
+                        ret = findView('txt:体验领金币', {flag:'find_all', failed: exitPopup});
+                    } else {
+                        break;
+                    }
+                    ++index;
+                }
+
+                target  = target.replace('#find_all#txt:体验领金币|', '');
+            } else if (ret.tag == '看视频领金币') {
+                var minCount = 0, maxCount = 0;
+                while (ret.length > 0 && maxCount < 5) {
+                    var txt = ret.views[0].parent[1].text.trim();
+                    if (txt && parseInt(txt) >= 20) {
+                        console.log('开始做视频任务');
+                        click(ret.views[0], {click: true, afterWait: 4000});
+                    } else {
+                        minCount++;
+                        if (minCount >= 3) {
+                            console.log('太小了，今天都不看了:' + txt);
+                            dIsDoLookVideo = false;
+                            break;
+                        }
+                    }
+
+                    ret = findView('txt:看视频领金币', {failed: exitPopup});
+                    maxCount++;
+                }
+            }
+
+            if (ret.tag == '立即领取') {
+                target = target.replace('txt^:立即领取|', '');
+            } else {
+                target = target.replace('txt:' + ret.tag + '|', '');
+            }
+
+            console.log('target:' + target);
+            ret = smartFindView(target, {flag: 'traverse_one_by_one', failed: exitPopup});
+            index++;
+        }
+
+        if (isFreshman) {
+            console.log('进入新手任务了');
+            scroll('up', {distance: 0.9, duration: parseInt(Math.random()*200 + 300), afterWait: 1000});
+            ret = smartFindView('txt*:看广告视频拿金币', {failed: exitPopup, maxStep: 3});
+            if (ret.length > 0) {
+                for (var item of ret.views[0].parent) {
+                    if (item.text == '立即观看') {
+                        console.log('观看广告视频拿金币');
+                        click(ret.views[0], {click: true, afterWait: 4000});
+                        ret = smartFindView('txt*:看广告视频拿金币', {failed: exitPopup, maxStep: 3});
+                        break;
+                    }
+                }
+            }
+
+            var __day dDoNewGift = false;
+            if (!dDoNewGift) {
+                scroll('up', {distance: 0.9, duration: parseInt(Math.random()*200 + 300), afterWait: 1000});
+                ret = smartFindView('txt*:立即领取', {failed: exitPopup, maxStep: 3});
+                if (ret.length > 0) {
+                    console.log('领取新人 福利');
+                    click(ret.views[0], {click: true, afterWait: 3000});
+                    dDoNewGift = true;
+                }
+            }
+        }
+
+        scroll('up', {distance: 0.7, duration: parseInt(Math.random()*200 + 300), afterWait: 1000});
+        ret = findView('txt:点击展开更多');
+        if (ret.length > 0) {
+            console.log('找到 点击展开更多');
+            click(ret.views[0], {click: true});
+        }
+
+        var __day dNeedMoneyTree = true;
+        if (dNeedMoneyTree) {
+            target = 'txt:睡觉赚金币|txt:走路赚金币|txt:摇钱树领金币|';
+        } else {
+            target = 'txt:睡觉赚金币|txt:走路赚金币|';
+        }
+        ret = smartFindView(target, {failed: exitPopup});
+        while (ret.length > 0) {
+            console.log('tag:' + ret.tag);
+            click(ret.views[0], {afterWait: 4000});
+            target = target.replace('txt:' + ret.tag + '|', '');
+            if (ret.tag == '睡觉赚金币') {
+                ret = findView('txt:累计睡觉');
+                if (ret.length > 0) {
+                    var t = 'txt^:看视频|id:app|', count = 0;
+                    ret = smartFindView(t, {failed: exitPopup});
+                    while (ret.length > 0 && count < 10) {
+                        if (ret.tag == '看视频') {
+                            click(ret.views[0], {afterWait: 2000});
+                        } else {
+                            var find = false;
+                            for (var item of ret.views[0].parent[1]) {
+                                if (item.text != '?') {
+                                    click(item, {afterWait: 2000});
+
+                                    ret = smartFindView('txt:看视频兑换|txt:看视频再领', {failed: exitPopup});
+                                    if (ret.length > 0) {
+                                        click(ret.views[0], {afterWait:3000});
+                                    }
+                                    find = true;
+                                    break;
+                                }
+                            }
+
+                            if (!find) {
+                                console.log('没有找到了');
+                                break;
+                            }
+                        }
+                        ++count;
+                        ret = smartFindView(t, {failed: exitPopup});
+                    }
+
+                    back2Pge('txt:我的', {failed: exitPopup});
+                } else {
+                    console.log('找不到 累计睡觉');
+                    back2Pge('txt:我的', {failed: exitPopup, backFirst: false});
+                }
+            } else if (ret.tag == '走路赚金币') {
+                ret = findView('txt^:今日步数', {maxStep: 8});
+                if (ret.length > 0) {
+                    var count = 0, t = 'txt^:点击兑换|txt^:再领|txt:走路赚金币@cn:android.webkit.WebView';
+                    ret = smartFindView(t, {failed: exitPopup});
+                    while (ret.length > 0 && count < 10) {
+                        if (ret.tag == '点击兑换') {
+                            click(ret.views[0], {afterWait:2000});
+                            var r = smartFindView('txt:看激励视频翻倍', {failed: exitPopup});
+                            if (r.length > 0) {
+                                click(r.views[0], {afterWait: 3000});
+                            }
+                        } else if (ret.tag == '再领') {
+                            click(ret.views[0], {afterWait: 2000});
+                        } else {
+                            var find = false;
+                            for (var item of ret.views[ret.views.length - 1]) {
+                                if (item.text !='?') {
+                                    click(item, {afterWait: 2000});
+                                    var r = smartFindView('txt:看视频兑换|txt:看视频再领', {failed: exitPopup});
+                                    if (r.length > 0) {
+                                        click(r.views[0], {afterWait: 3000});
+                                    }
+                                    find = true;
+                                    break;
+                                }
+                            }
+
+                            if (!find) {
+                                console.log('没有找到了');
+                                break;
+                            }
+                        }
+
+                        ++count;
+                        ret = smartFindView(t, {failed: exitPopup});
+                    }
+
+                    back2Page('txt:我的|txt:任务中心|id:com.jifen.qukan:id/nf', {failed: exitPopup});
+                } else {
+                    console.log('找不到 今日步数');
+                    back2Page('txt:我的|txt:任务中心|id:com.jifen.qukan:id/nf', {failed: exitPopup, backFirst: false});
+                }
+            } else if (ret.tag == '摇钱树领金币') {
+                target = target.replace('txt:摇钱树领金币|', '');
+                ret = findView('txt:摇钱树');
+                if (ret.length > 0) {
+                    var count = 0;
+                    ret = smartFindView('txt^:机会用完|txt^:领', {failed: exitPopup});
+                    while (ret.length > 0 && count < 10) {
+                        if (ret.tag == '领') {
+                            click(ret.views[0], {click: true, afterWait: 4000});
+                            ret = smartFindView('txt^:机会用完|txt^:领', {failed: exitPopup});
+                        } else {
+                            console.log('摇钱树完成了');
+                            dNeedMoneyTree = false;
+                            break;
+                        }
+                        ++count;
+                    }
+
+                    back2Page('txt:我的|txt:任务中心|id:com.jifen.qukan:id/nf', {failed: exitPopup});
+                } else {
+                    console.log('找不到 摇钱树');
+                    back2Page('txt:我的|txt:任务中心|id:com.jifen.qukan:id/nf', {failed: exitPopup, backFirst: false});
+                }
+            }
+
+            if (target!= '') {
+                ret = smartFindView(target, {failed: exitPopup});
+            } else {
+                break;
+            }
+        }
+
+        scroll('up', {distance: 0.6, duration: parseInt(Math.random()*200 + 300), afterWait: 1000});
+        var count = 0, doIndex = 0;
+        ret = smartFindView('txt:福利专区', {failed: exitPopup});
+        while (ret.length > 0 && count < 10) {
+            var find = false, index = 0;
+            for (var item of ret.views[0].parent.parent[1]) {
+                if (item.className == 'android.widget.LinearLayout') {
+                    index++;
+                    if (index > doIndex && item[0][0][2][0][0].length==0) {
+                        doIndex = index;
+                        console.log('点击广告');
+                        click(item, {afterWait: 20000});
+                        refresh();
+                        find = true;
+                        back2Page('txt:我的|txt:任务中心|id:com.jifen.qukan:id/nf', {failed: exitPopup, backFirst: false});
+                        break;
+                    }
+                }
+            }
+
+            if (!find) {
+                break;
+            }
+            ++count;
+            ret = smartFindView('txt:福利专区', {failed: exitPopup});
+        }
+
+        console.log('click back to 推荐头条');
+        back2Page('txt:我的|txt:任务中心|id:com.jifen.qukan:id/nf', {failed: exitPopup, backFirst: false});
+        switchPage('txt:头条|txt:刷新', 'txt:推荐', {click: true, failed: exitPopup, descendant:[-1, -1]});
+    } else {
+        console.log('not find 任务');
+    }
+    console.log('leave task');
+}
+
+function noPopup() {
+    var ret = findView('id:signDialog', {maxStep: 1});
+    if (ret.length > 0) {
+        console.log('找到提现广告，去掉');
+        for (var item of ret.views[0][0]) {
+            if (item.clickable) {
+                click(item, {click: true});
+                break;
+            }
+        }
+    }
+}
+
+function fetchCorn() {
+    if (dNeedFetchCorn) {
+        var ret = smartFindView('txt:当前金币', {failed: exitPopup});
+        if (ret.length > 0) {
+            for (var item of ret.views[0].parent.parent) {
+                if (item.length == 0) {
+                    console.log('找到 item， 点击');
+                    click(item, {afterWait: 1000});
+                    var container, count = 0;
+                    ret = smartFindView('txt:天降好礼|txt:红包等你拿|id:hudong-dialog|', {flag:'traverse_one_by_one', failed: exitPopup});
+                    while (ret.length > 0 && count < 10) {
+                        if (ret.tag == 'hudong-dialog') {
+                            if (ret.views[0].height > 10) {
+                                console.log('点击广告');
+                                click(ret.views[0][0][0], {click: true, afterWait: 2000});
+                            } else {
+                                break;
+                            }
+                        } else {
+                            container=ret.views[0].parent.parent.parent;
+                            break;
+                        }
+                        ++count;
+                        ret = smartFindView('txt:天降好礼|txt:红包等你拿|id:hudong-dialog|', {flag:'traverse_one_by_one', failed: exitPopup});
+                    }
+
+                    if (container) {
+                        sleep(3000);
+                        var continueDo = hasFreeCount(), index = 0;
+                        while(continueDo && index < 20) {
+                            for (var item of container) {
+                                if (item[0].length == 0) {
+                                    click(item, {click: true, afterWait: 4000});
+                                    ret = smartFindView('id:hudong-dialog', {failed: exitPopup});
+                                    if (ret.length > 0) {
+                                        click(ret.views[0][0][0], {click: true});
+                                    } else {
+                                        console.log('没找到 对话框');
+                                    }
+                                    break;
+                                }
+                            }
+
+                            continueDo = hasFreeCount();
+                            ++index;
+                        }
+
+                        back2Page('txt:提现兑换', {failed: exitPopup});
+                    } else {
+                        console.log('没找到容器');
+                        back2Page('txt:提现兑换', {failed: exitPopup, backFirst: false});
+                    }
+
+                    break;
+                }
+            }
+        }
+    }
+}
+
+function hasFreeCount() {
+    var result = false;
+    var ret = smartFindView('txt^:今日免费', {failed: exitPopup});
+    if (ret.length > 0) {
+        var arr = ret.views[0].text.fetchInteger(1);
+        // var text = ret.views[0].text.fetchInteger(1);
+        if (arr.length > 0) {
+            if (arr[0] > 0) {
+                result = true;
+            } else {
+                dNeedFetchCorn = false;
+            }
+        }
+    }
+    return result;
+}
+
+function withdraw() {
+    var __day dNeedWithdraw = true;
+    if ((dNeedFetchCorn || dNeedWithdraw) && new Date().getHours()>=8) {
+        var ret = findView('id:com.jifen.qukan:id/xe', {failed: exitPopup});
+        if (ret.length > 0) {
+            var money = parseInt(ret.views[0].text);
+            if (money >= 10000 || dNeedFetchCorn) {
+                ret = switchPage('id:com.jifen.qukan:id/be2', 'txt:我的钱包', {failed: exitPopup, maxStep: 5, before: noPopup});
+                if (ret.length > 0) {
+                    ret = switchPage('txt:提现', 'txt:提现兑换', {failed: exitPopup, maxStep: 5, before: noPopup});
+                    if (ret.length > 0) {
+                        fetchCorn();
+                        if (money >= 10000) {
+                            var moneyText = 'txt*:10000金币';
+                            if (mondy >= 50000) {
+                                moneyText = 'txt*:50000金币';
+                            }
+
+                            ret = switchPage(moneyText, 'txt:立即提现|txt:做任务，立即解锁提现', {failed: exitPopup, maxStep: 5, before: noPopup});
+                            if (ret.length > 0) {
+                                if (ret.tag == '做任务，立即解锁提现') {
+                                    dNeedWithdraw = false;
+                                    console.log('提现失败，不在尝试');
+                                } else {
+                                    ret = switchPage('txt:立即提现', 'txt*:提现成功|txt:请绑定提现手机号|txt*:您还需连续参与', {failed: exitPopup, maxStep: 5, before: noPopup});
+                                    if (ret.length > 0) {
+                                        console.log('text:' + ret.tag);
+                                        if (ret.tag == '您还需连续参与') {
+                                            dNeedWithdraw = false;
+                                        } else if (ret.tag == '请绑定提现手机号') {
+                                            click(ret.views[0].parent[1][0], {afterWait: 1000});
+                                            paste(ret.views[0].parent[1][0], rsPhoneNumber, {afterWait: 1000});
+                                            clickByTag('txt:获取验证码');
+
+                                            var s = new Date().getTime();
+                                            ret = findView('txt*:绑定成功');
+                                            while (ret.length <= 0 && (new Date().getTime() - s) < 30000) {
+                                                ret = findView('txt*:绑定成功');
+                                            }
+                                        } else {
+                                            console.log('提现成功');
+                                            dNeedWithdraw = false;
+                                            back({afterWait: 1000});
+                                        }
+                                    } else {
+                                        console.log('提现失败，不在尝试');
+                                        dNeedWithdraw = false;
+                                    }
+                                }
+                            }
+                        }
+
+                        back({afterWait: 1000});
+
+                    }
+                }
+
+                back2Page('txt:任务|id:com.jifen.qukan:id/nf', {failed: exitPopup});
+            } else {
+                console.log('余额不足');
+                dNeedWithdraw = false;
+            }
+        } else {
+            console.log('not find ');
+        }
+    } else {
+        console.log('no need withdraw');
+    }
+}
+
+
+function checkEnterAD() {
+    if ('com.qq.e.ads.PortraitADActivity|com.kwad.sdk.api.proxy.app.KsRewardVideoActivity|com.bykv.vk.openvk.activity.TTRdEpVdActivity|com.iclicash.advlib.ui.front.InciteADActivity'.includes(rsCurWindowClassName)) {
+        return true;
+    }
+
+    var ret = findView('id:com.jifen.qukan:id/gm|txt:腾讯社交联盟广告|txt^:奖励将于|txt*:获得奖励|txt$:后可领取奖励|txt$:后可领取金币|txt$:后可领金币', {maxStep:1});
+    if (ret.length > 0) {
+        console.log('force enter:' + ret.tag);
+        return true;
+    }
+    return false;
+}
+
+function dealAD() {
+    if (checkEnterAD()) {
+        console.log('enter ad');
+        var startTime = new Date().getTime(), isFindClose = false;
+        while (new Date().getTime() - startTime < 65000) {
+            var ret = findView('id:com.jifen.qukan.content.shell:id/fe|txt:我的|txt:活动规则|txt:摇钱树|txt^:看视频再领', {maxStep:1});
+            if (ret.length > 0) {
+                console.log('找到标记，退出广告:' + ret.tag);
+                break;
+            }
+
+            ret = findView('id:com.jifen.qukan:id/tt_video_ad_close_layout', {maxStep: 1});
+            if (ret.length > 0) {
+                console.log('找到  tt_video_ad_close_layout  并点击');
+                click(ret.views[0], {click: true});
+                break;
+            }
+
+            ret = findView('cn:android.widget.ImageView', {flag:'clickable|find_all', maxStep: 1});
+            if (ret.length > 0) {
+                for (var item of ret.views) {
+                    if ((item.parent.length==2) && (item.width==item.height) && (item.width<40*rsDensity) &&(item.top<80*rsDensity)&& (item.left<30*rsDensity)) {
+                        click(item, {click: true, beforeWait: 1000, afterWait: 1000});
+                        isFindClose = true;
+                        break;
+                    }
+                }
+            }
+
+            if (isFindClose) {
+                break;
+            }
+
+            ret = findView('txt:点击重播|txt:点击取消|txt:关闭|txt:继续观看|id:com.jifen.qukan:id/ksad_end_close_btn', {maxStep: 1});
+            if (ret.length > 0) {
+                if (ret.tag == 'com.jifen.qukan:id/ksad_end_close_btn') {
+                    if (ret.views[0].parent.length==2) {
+                        click(ret.views[0], {click: true});
+                        isFindClose = true;
+                        break;
+                    }
+                } else if (ret.tag == '继续观看') {
+                    click(ret.views[0], {click: true});
+                } else {
+                    back();
+                }
+            }
+
+            globalDealAD();
+        }
+
+        if (new Date().getTime() - startTime >= 65000) {
+            if (checkEnterAD()) {
+                if (sPreADTimeout) {
+                    sShouldExit = true;
+                }
+            }
+
+            refresh();
+            sPreADTimeout = true;
+        } else {
+            sPreADTimeout = false;
+            if (new Date().getTime() - startTime < 10000) {
+                if (checkEnterAD()) {
+                    refresh();
+                }
+            }
+        }
+
+        console.log('退出了广告');
+        return true;
+    }
+}
+
+function exitPopup() {
+    if (sShouldExit) {
+        return true;
+    }
+
+    var ret = findView('txt^:看视频再领|txt^:再看1个领|txt:退出逛逛|id:com.jifen.qukan.content.shell:id/iw|id:com.jifen.qukan:id/bxb|id:com.xiaomi.market:id/iv_close|id:com.jifen.qukan:id/agt|id:com.jifen.qukan:id/afx|id:com.jifen.qukan:id/b6s|id:com.jifen.qukan:id/b71|id:com.jifen.qukan:id/a4p', {maxStep:1});
+    if (ret.length > 0) {
+        click(ret.views[0], {click:true, afterWait: 3000});
+        return true;
+    }
+
+    ret = findView('txt:点击重播', {maxStep: 1});
+    if (ret.length > 0) {
+        back();
+        return true;
+    }
+
+    ret = findView('txt:我知道了|txt:个人隐私保护指引|txt:微信一键登录|txt:拒绝|txt:点击领钱', {maxStep:1});
+    if (ret.length > 0) {
+        var b = true;
+        console.log('找到:' + ret.tag);
+        if (ret.tag == '个人隐私保护指引') {
+            clickByTag('txt:同意');
+        } else if (ret.tag == '微信一键登录') {
+            clickByTag('txt:阅读并同意「用户协议」和「隐私政策」', {click: true, afterWait: 1000});
+            clickByTag('txt:微信一键登录', {click: true, afterWait: 2000});
+        } else if (ret.tag == '拒绝') {
+            var t = findView('txt^:你的微信头像|txt:同意去开启|txt:始终允许', {maxStep: 2});
+            if (t.length <= 0) {
+                if (sEnterApp) {
+                    click(ret.views[0]);
+                } else {
+                    b = false;
+                }
+            } else {
+                clickByTag('txt:同意|txt:同意去开启|txt:始终允许', {click: true});
+            }
+        } else {
+            click(ret.views[0], {click:true, afterWait:4000});
+        }
+
+        if (b) {
+            return true;
+        }
+    }
+
+    if (!globalExitPopup()) {
+        return dealAD();
+    }
+
+    return false;
+}
+
+function skipAD() {
+    var ret = findView('txt:跳过广告|txt:头条', {maxStep: 1});
+    if (ret.length > 0) {
+        if (ret.tag == '头条') {
+            click(ret.views[0], {click: true});
+        } else {
+            click(ret.views[0]);
+        }
+    }
+    exitPopup();
+}
+
+function cbWindowChange(textList, className, packageName, event) {
+    if (className=='com.jifen.qukan.content.title.treasurebox.dialog.November11Dialog') {
+        clickByTag('id:com.jifen.qukan:id/lq', {click: true, afterWait: 1000});
+    } else if(className=='android.widget.FrameLayout') {
+        clickByTag('id:com.jifen.qukan:id/afx', {click: true, afterWait: 1000});
+    } else if(className=='com.iclicash.advlib.__remote__.ui.incite.video.ClosePromptDialog') {
+        clickByTag('txt:放弃金币', {click: true, afterWait: 1000});
+    } else if (className == 'com.iclicash.advlib.__remote__.ui.banner.json2view.view.view.dialog.InciteDownloadSuperviseDialog' || className =='com.iclicash.advlib.__remote__.ui.banner.json2view.view.view.dialog.DownloadSuperviseDialog' || className=='com.jifen.qkui.dialog.QkContentWrapDialog') {
+        back({beforeWait: 1000});
+    } else if(className=='com.jifen.qukan.ad.splash.SplashMultiDialog') {
+        clickByTag('txt:跳过广告', {maxStep:2});
+    } else if(className=='com.jifen.qkbase.main.dialog.CloseDialog') {
+        clickByTag('id:com.jifen.qukan:id/a76');
+    } else if(className=='com.jifen.qkbase.adreward.CoinsDialog') {
+        var ret = findView('恭喜获得');
+        if (ret.length <= 0) {
+            back({beforeWait: 1000});
+        }
+    } else if(className=='com.jifen.qukan.growth.card.dialog.ActivityCardDialog') {
+        clickByTag('id:com.jifen.qukan:id/afx', {click: true});
+    } else if(className=='com.jifen.qukan.content.title.treasurebox.dialog.TreasureboxCountdownDialog') {
+        clickByTag('id:com.jifen.qukan.content.shell:id/bh');
+    } else {
+        return false;
+    }
+    return true;
+}
+
+function cbNotification(textList, className, packageName, event) {
+    console.log('Notification textList:' + textList + '  className:' + className + '  packageName:' + packageName);
+    for (var item of textList) {
+        if (item.includes('验证码')) {
+            console.log('进入通知处理:' + item);
+            var arr = item.fetchInteger();
+            if (arr.length > 0) {
+                var subText = arr[0] + '';
+                console.log('验证码为:' + subText);
+                var ret = findView('txt:后重新发送');
+                if (ret.length > 0) {
+                    paste(ret.views[0].parent[1], subText, {afterWait: 1000});
+                    clickByTag('txt:立即验证', {click: true});
+                } else {
+                    console.log('找不到输入验证码的框');
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}

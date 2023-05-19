@@ -1,0 +1,274 @@
+function main() {
+    if (1 != launchApp('com.ss.android.ugc.aweme.lite', 'txt:关注|txt:首页', {maxStep: 50})) {
+    console.log('进入app失败');
+        return;
+    }
+
+    
+    back();
+    
+    lookVideo();
+    
+    var cc = 3;
+    var ret;
+    var x = rsScreenWidth/2, y = rsScreenHeight - 50;
+    console.log('x:' + x + '  y:' + y, rsScreenWidth, rsScreenHeight);
+    while (cc > 0) {        
+        gestureClick(x, y, {afterWait: 3000});
+        ret = findView('txt:赚钱任务|txt^:金币收益|txt^:立即签到', {click: true, fastCount: 3});
+        if (ret.length > 0) {
+            break;
+        }
+        --cc;
+    }
+//    var ret = switchPage('id:com.ss.android.ugc.aweme.lite:id/f+n|com.ss.android.ugc.aweme.lite:id/gb=', 'txt:赚钱任务|txt^:金币收益|txt^:立即签到', {click: true, afterWait: 5000});
+    if (ret.length > 0) {
+        console.log('enter task');
+        
+        if (ret.tag == '立即签到') {
+            clickByTag('txt^:立即签到', {afterWait: 2000});
+        }
+
+        console.log('开始领取');
+        var target = 'txt:领取|txt:去领取|txt^:立即签到|txt^:签到奖励已翻倍|txt:开宝箱得金币|txt:去逛街|txt:jks';
+        var count = 1;
+        while (true) {
+            console.log('all tag:' + target);
+            ret = findView(target, {failed: dealAD, fastCount: 4});
+            if (ret.length > 0) {
+                console.log('xx:' + ret.tag);
+                click(ret.views[0], {afterWait: 5000});
+                target = removeTag(target, ret.tag);
+
+                if (ret.tag == '立即签到' || ret.tag == '签到奖励已翻倍') {
+                    console.log('立即签到');
+                    clickByTag('txt^:看广告视频再赚');
+                } else {
+                    if (ret.tag =='领取') {
+                        clickByTag('txt:开始攒金币');
+                    } else if (ret.tag =='开宝箱得金币') {
+                        var ret = findView('txt^:看广告视频再赚');
+                        if (ret.length > 0) {
+                            console.log('确认开箱了，');
+                            click(ret.views[0], {afterWait: 5000});
+                            ret = findView('txt:赚钱任务|txt^:金币收益', {failed: exitAD});
+                        }
+                    } else if (ret.tag == '去逛街') {
+                        ret = findView('txt:赚钱任务|txt^:金币收益', {fast:true});
+                        if (ret.length <= 0) {
+                            console.log('进入了逛街');
+                            var start = new Date().getTime();
+                            while (new Date().getTime() - start < 1000 * 100) {
+                                scroll('up', {distance:Math.random()*0.82 + 0.5});
+                                ret = findView('txt:已领取', {fast:true});
+                                if (ret.length > 0) {
+                                    break;
+                                }
+                            }
+
+                            back2Page('txt:赚钱任务|txt^:金币收益', {fast:true, failed: exitGJ});
+                        }
+                    }                
+                }
+//                ret = findView(target, {failed: dealAD, fast:true});
+            } else {
+                if (count > 0) {
+                    console.log('开始滚动啦');
+                    scroll('up', {distance: 0.8, afterWait: 5000});
+                    count -= 1;
+                } else {
+                    console.log('找不到，结束了');
+                    break;
+                }
+            }
+        }
+
+//        ret = findView('');
+        console.log('任务完成啦');
+    } else {
+        console.log('enter failed');
+    }
+
+    console.log('end');
+    /*
+    clickByTag('txt^:立即签到');
+    clickByTag('txt^:看广告视频再赚');
+    clickByTag('txt:去领取');
+    clickByTag('txt:去逛街');
+    clickByTag('txt:开宝箱得金币');
+    clickByTag('txt^:看广告视频再赚');
+    
+    clickByTag('id:com.ss.android.ugc.aweme.lite:id/f+n', {random: false, click: true});
+    */
+}
+
+function lookVideo() {
+    scroll('up', {distance: 0.9 + Math.random() * 0.05});
+
+    var startTime = new Date().getTime();
+//    var maxTime = (10 + Math.random() * 2) * 60 * 1000;
+    var maxTime = 1 * 60 * 1000;
+    while (new Date().getTime() - startTime < maxTime ) {
+        var s = new Date().getTime();
+        var doLikeTime = (3 + Math.random() * 2) * 1000;
+        sleep(doLikeTime);
+        clickByTag('txt^:未点赞', {afterWait: 2000, failed: ep});
+//        sleep(15 * 1000);
+    	scroll('up', {distance: 0.9 + Math.random() * 0.05});
+    }
+}
+
+function ep() {
+    var ret = findView('txt:青少年模式', {maxStep: 1});
+    if (ret.length > 0) {
+        clickByTag('txt:我知道了', {click: true});
+    }
+}
+
+function checkEnterAD() {
+    if ('com.ss.android.excitingvideo.ExcitingVideoActivity'.includes(rsCurWindowClassName)) {
+        return true;
+    }
+    var ret = findView('txt:关闭广告|txt^:奖励将于|txt*:获得奖励|txt$:后可领取奖励|txt$:后可领取金币|txt$:后可领金币|id:com.ss.android.ugc.aweme.adlynx:id/vangogh_video_view|id:com.ss.android.ugc.aweme.lite:id/video_view|id:com.ss.android.ugc.aweme.lite:id/mimo_reward_root_view|id:com.ss.android.ugc.aweme.lite:id/tt_reward_root', {maxStep:1,fast:true});
+    if (ret.length > 0) {
+        if (!ret.tag.includes('邀请好友')) {
+            console.log('force enter :' + ret.tag);
+            return true;
+        }
+    }
+    return false;
+}
+
+
+function exitGJ() {
+    var ret = findView('txt:坚持退出', {maxStep:3});
+    if (ret.length > 0) {
+        click(ret.views[0]);
+    }
+}
+
+function dealAD() {
+    if (checkEnterAD()) {
+        console.log('enter ad');
+        var state = 1;
+        var isFindClose = false;
+        var startTime = new Date().getTime();
+        while (new Date().getTime() - startTime < 100000) {
+            var ret = findView('txt^:金币收益|txt:赚钱任务|txt:领取奖励', {maxStep: 3});
+            if (ret.length > 0) {
+                if (ret.tag == '领取奖励') {
+                    console.log('找到领取奖励');
+                    clickByTag('txt:领取奖励', {afterWait: 3000,{maxStep: 3}});
+                     startTime = new Date().getTime();
+                    // 继续广告
+                } else {
+                    console.log('找到标记，说明没有进入广告：' + ret.tag);
+                    break;
+                }
+            }
+
+            if (rsCurWindowClassName=='com.ss.android.ugc.aweme.crossplatform.activity.CrossPlatformActivity' || (rsCurWindowClassName=='com.bytedance.ies.android.rifle.container.RifleContainerActivity')) {
+                console.log('back');
+                back();
+            }
+
+            if (rsCusPackageName != 'com.ss.android.ugc.aweme.lite') {
+                refresh();
+            }
+
+            ret = findView('txt^:参与互动|txt^:浏览页面|txt:禁止|txt:放弃奖励|txt*:要继续观看视频|txt:继续观看|txt^:再看一个获取|txt:继续观看，领取奖励|id:返回|txt:领取成功', {maxStep: 3});
+            if (ret.length > 0) {
+                console.log('找到参与互动:' + ret.tag);
+                if (ret.views[0].text.includes('浏览页面')) {
+                    if (ret.views[0].text.includes('领取奖励')) {
+                        click(ret.views[0]);
+                    }
+                } else if (ret.tag == '要继续观看视频') {
+                    click(ret.views[0].parent[2], {afterWait:3000});
+                } else if (ret.tag == '领取成功') {
+                    var v = ret.views[0];
+                    gestureClick(v.left + v.width + 50, v.top + 30);
+                    clickByTag('txt:关闭当前视频', {maxStep: 3});
+                    console.log('找到 领取成功');
+                } else {
+                    click(ret.views[0]);
+                }
+            }
+
+            // 关闭右上角广告
+            console.log('sss');
+            ret = findView('txt:关闭，按钮', {maxStep:3});
+            if (ret.length > 0) {
+                console.log('find:' + ret.tag);
+                if (ret.tag == '关闭，按钮') {
+                    clickByTag('txt:关闭，按钮');
+                }
+            }
+
+            if (isFindClose) {
+                console.log(' find close so break');
+                break;
+            }
+        }
+
+        if (state == 1) {
+        	if (new Date().getTime() - startTime >= 30000) {
+                console.log('refresh1===');
+                refresh();
+           		++state;
+            }
+        } else if (2 == state) {
+        	if (new Date().getTime() - startTime >= 40000) {
+                console.log('refresh2===');
+                refresh();
+           		++state;
+            }
+        } else if (3 == state) {
+        	if (new Date().getTime() - startTime >= 50000) {
+                console.log('refresh3===');
+                refresh();
+           		++state;
+            }
+        }
+        
+        if (new Date().getTime() - startTime >= 60000) {
+            console.log('timeout');
+            if (checkEnterAD()) {
+//                back();
+                console.log('网络太差卡住了');
+                sShouldExit = true;
+            }
+
+            refresh();
+        } else {
+            if (new Date().getTime() - startTime < 10000) {
+                if (checkEnterAD()) {
+                    console.log('广告时间太短，说明很有可能是广告的windowClass没有变更');
+                    refresh();
+                }
+            }
+        }
+
+        console.log('退出广告');
+        return true;
+    }
+    console.log('check ad, not enter ad');
+}
+
+function removeTag(target, tag) {
+	var index = target.indexOf(tag);
+	if (index >= 0) {
+		var start = target.lastIndexOf('|', index);
+		var end = target.indexOf('|', index);
+		if (start < 0) {
+			start = -1;
+		}
+		if (end < 0) {
+			end = target.length - 1;
+		}
+		var txt = target.substring(start + 1, end + 1);
+		console.log('remove txt:' + txt);
+		target = target.replace(txt, '');
+	}
+	return target;
+}

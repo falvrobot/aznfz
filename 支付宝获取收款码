@@ -1,0 +1,44 @@
+
+function main() {
+    requestScreenShot();    
+    var ret = launchApp('com.eg.android.AlipayGphone', 'txt:我的', {failed: exitPopup});
+    if (ret <= 0) {
+        console.log('can not startup alipay');
+        return;
+    }
+    ret = switchPage('txt:收付款', 'txt:我知道了', {failed: exitPopup});
+    if (ret.length > 0) {
+        console.log('切换成功');
+        clickByTag('txt:我知道了', {click: true, afterWait:1000,failed: exitPopup});
+        ret = qrDecode();
+        console.log('qr:' + ret);
+        if (ret) {
+            // post qr给外界
+            var data = {'fun': 'Paycode', 'data': ret, 'id':rsUUID};
+            var ret = httpPost('http://xxxx.com',data, 'json');
+            console.log('post ret:',ret);
+            ret = findView('txt:完成', {maxStep: 50, failed: exitPopup});
+            if (ret.length > 0) {
+                var data = {'fun': 'Paycomplete', 'data': '1', 'id':rsUUID};
+                var ret = httpPost('http://xxxx.com',data, 'json');
+                console.log('post ret:',ret);
+
+                console.log('find 完成 finished');
+                click(ret.views[0], {click: true});
+            } else {
+                console.log('find 完成 failed');
+            }
+
+            back2Page('txt:我的', {backFirst: false});
+        }
+    } else {
+        console.log('切换到收款码失败');
+    }
+}
+
+function exitPopup() {
+    var ret = findView('txt:稍后再说|txt:关闭@cn:android.widget.ImageView', {maxStep:1});
+    if (ret.length > 0) {
+        click(ret.views[0], {click: true});
+    }
+}
